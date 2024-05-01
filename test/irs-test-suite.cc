@@ -72,10 +72,10 @@ class IrsTestSuite : public TestSuite
 };
 
 IrsTestSuite::IrsTestSuite()
-    : TestSuite("irs", UNIT)
+    : TestSuite("irs", Type::UNIT)
 {
     // TestDuration for TestCase can be QUICK, EXTENSIVE or TAKES_FOREVER
-    AddTestCase(new IrsTestCase1, TestCase::QUICK);
+    AddTestCase(new IrsTestCase1, Duration::QUICK);
 }
 
 // Do not forget to allocate an instance of this TestSuite
