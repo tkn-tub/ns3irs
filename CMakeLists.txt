@@ -18,7 +18,8 @@ build_lib(
     HEADER_FILES model/irs.h
                  helper/irs-helper.h
                  model/irs-propagation-loss-model.h
-    LIBRARIES_TO_LINK ${libcore}
+    LIBRARIES_TO_LINK
+        ${libpropagation}
     TEST_SOURCES test/irs-test-suite.cc
                  ${examples_as_tests_sources}
 )
