@@ -1,5 +1,5 @@
-#ifndef NS3_IRS_PROPAGATION_LOSS_MODEL_H
-#define NS3_IRS_PROPAGATION_LOSS_MODEL_H
+#ifndef IRS_PROPAGATION_LOSS_MODEL_H
+#define IRS_PROPAGATION_LOSS_MODEL_H
 
 #include "ns3/node-container.h"
 #include "ns3/node.h"
@@ -9,8 +9,6 @@
 namespace ns3
 {
 
-class MobilityModel;
-
 class IrsPropagationLossModel : public PropagationLossModel
 {
   public:
@@ -19,6 +17,7 @@ class IrsPropagationLossModel : public PropagationLossModel
      * \return the object TypeId
      */
     static TypeId GetTypeId();
+
     IrsPropagationLossModel();
     ~IrsPropagationLossModel() override;
 
@@ -26,10 +25,13 @@ class IrsPropagationLossModel : public PropagationLossModel
     IrsPropagationLossModel(const IrsPropagationLossModel&) = delete;
     IrsPropagationLossModel& operator=(const IrsPropagationLossModel&) = delete;
 
+    double CalcRxPower(double txPowerDbm, Ptr<MobilityModel> a, Ptr<MobilityModel> b) override;
+
   private:
     double DoCalcRxPower(double txPowerDbm,
                          Ptr<MobilityModel> a,
                          Ptr<MobilityModel> b) const override;
+
     int64_t DoAssignStreams(int64_t stream) override;
 
     Ptr<NodeContainer> m_irsNodes;
