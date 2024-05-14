@@ -4,6 +4,7 @@
 #include "ns3/node-container.h"
 #include "ns3/node.h"
 #include "ns3/propagation-loss-model.h"
+#include "ns3/propagation-delay-model.h"
 #include "ns3/vector.h"
 
 namespace ns3
@@ -25,7 +26,7 @@ class IrsPropagationLossModel : public PropagationLossModel
     IrsPropagationLossModel(const IrsPropagationLossModel&) = delete;
     IrsPropagationLossModel& operator=(const IrsPropagationLossModel&) = delete;
 
-    double CalcRxPower(double txPowerDbm, Ptr<MobilityModel> a, Ptr<MobilityModel> b) override;
+    double CalcRxPower(double txPowerDbm, Ptr<MobilityModel> a, Ptr<MobilityModel> b) const override;
 
   private:
     double DoCalcRxPower(double txPowerDbm,
@@ -35,6 +36,7 @@ class IrsPropagationLossModel : public PropagationLossModel
     int64_t DoAssignStreams(int64_t stream) override;
 
     Ptr<NodeContainer> m_irsNodes;
+    Ptr<PropagationDelayModel> m_delayModel;
 };
 
 } // namespace ns3

@@ -37,13 +37,13 @@ IrsPropagationLossModel::~IrsPropagationLossModel()
 double
 IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
                                      Ptr<ns3::MobilityModel> a,
-                                     Ptr<ns3::MobilityModel> b)
+                                     Ptr<ns3::MobilityModel> b) const
 {
     double pl_other = txPowerDbm;
     Ptr<PropagationLossModel> next = GetNext();
 
     // we need at least one more propagation loss model
-    NS_ASSERT_MSG(next != nullptr, "No propagation loss model found");
+    NS_ASSERT_MSG(next == nullptr, "No propagation loss model found");
 
     if (next)
     {
