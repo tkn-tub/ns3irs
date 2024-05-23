@@ -1,20 +1,41 @@
 #ifndef IRS_H
 #define IRS_H
 
+#include "ns3/object.h"
+#include "ns3/vector.h"
+#include "../helper/lookup-structs.h"
+
 // Add a doxygen group for this module.
 // If you have more than one file, this should be in only one of them.
 /**
  * \defgroup irs Description of the irs
  */
-
 namespace ns3
 {
 
-// Each class should be documented using Doxygen,
-// and have an \ingroup irs directive
+class Irs : public Object
+{
+  public:
+    /**
+     * \brief Get the type ID.
+     * \return the object TypeId
+     */
+    static TypeId GetTypeId();
+    Irs();
+    ~Irs() override;
 
-/* ... */
+    IrsEntry GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const;
 
-}
+    void SetLookupTable(Ptr<std::unordered_map<std::pair<uint8_t, uint8_t>, IrsEntry, hash_tuple>> table);
+    std::unordered_map<std::pair<uint8_t, uint8_t>, IrsEntry, hash_tuple> GetLookupTable() const;
+
+    void SetDirection(Vector direction);
+    Vector GetDirection() const;
+  private:
+    std::unordered_map<std::pair<uint8_t, uint8_t>, IrsEntry, hash_tuple> m_irsLookupTable;
+    Vector m_direction;
+};
+
+} // namespace ns3
 
 #endif /* IRS_H */

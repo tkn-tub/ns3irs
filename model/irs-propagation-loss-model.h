@@ -37,6 +37,7 @@ class IrsPropagationLossModel : public PropagationLossModel
 
     Ptr<NodeContainer> m_irsNodes;
     Ptr<PropagationDelayModel> m_delayModel;
+    Ptr<PropagationLossModel> m_lossModel;
 };
 
 } // namespace ns3
