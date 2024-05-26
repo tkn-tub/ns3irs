@@ -14,9 +14,11 @@ build_lib(
     LIBNAME irs
     SOURCE_FILES model/irs.cc
                  helper/irs-helper.cc
+                 helper/irs-lookup-helper.cc
                  model/irs-propagation-loss-model.cc
     HEADER_FILES model/irs.h
                  helper/irs-helper.h
+                 helper/irs-lookup-helper.h
                  model/irs-propagation-loss-model.h
     LIBRARIES_TO_LINK
         ${libpropagation}

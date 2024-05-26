@@ -1,9 +1,10 @@
 #ifndef IRS_H
 #define IRS_H
 
+#include "../helper/irs-lookup-helper.h"
+
 #include "ns3/object.h"
 #include "ns3/vector.h"
-#include "../helper/lookup-structs.h"
 
 // Add a doxygen group for this module.
 // If you have more than one file, this should be in only one of them.
@@ -24,15 +25,16 @@ class Irs : public Object
     Irs();
     ~Irs() override;
 
-    IrsEntry GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const;
+    IrsEntry GetIrsEntry(uint16_t in_angle, uint16_t out_angle) const;
 
-    void SetLookupTable(Ptr<std::unordered_map<std::pair<uint8_t, uint8_t>, IrsEntry, hash_tuple>> table);
-    std::unordered_map<std::pair<uint8_t, uint8_t>, IrsEntry, hash_tuple> GetLookupTable() const;
+    void SetLookupTable(Ptr<IrsLookupTable> table);
+    Ptr<IrsLookupTable> GetLookupTable() const;
 
-    void SetDirection(Vector direction);
+    void SetDirection(const Vector& direction);
     Vector GetDirection() const;
+
   private:
-    std::unordered_map<std::pair<uint8_t, uint8_t>, IrsEntry, hash_tuple> m_irsLookupTable;
+    Ptr<IrsLookupTable> m_irsLookupTable;
     Vector m_direction;
 };
 

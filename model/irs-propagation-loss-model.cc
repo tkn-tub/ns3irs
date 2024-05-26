@@ -1,7 +1,8 @@
 #include "irs-propagation-loss-model.h"
 
-#include "ns3/pointer.h"
+#include "ns3/irs.h"
 #include "ns3/mobility-model.h"
+#include "ns3/pointer.h"
 
 namespace ns3
 {
@@ -42,12 +43,12 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
     double pl_other = txPowerDbm;
     Ptr<PropagationLossModel> next = GetNext();
 
-    // we need at least one more propagation loss model
-    NS_ASSERT_MSG(next == nullptr, "No propagation loss model found");
-
     if (next)
     {
         pl_other = next->CalcRxPower(pl_other, a, b);
+    }
+    else{
+        NS_FATAL_ERROR("No propagation loss model found");
     }
 
     double pl_irs = DoCalcRxPower(txPowerDbm, a, b);
@@ -62,8 +63,13 @@ IrsPropagationLossModel::DoCalcRxPower(double txPowerDbm,
 {
     for(auto irsNode = m_irsNodes->Begin(); irsNode != m_irsNodes->End(); irsNode++)
     {
-        Ptr<Node> irs = *irsNode;
-        std::cout << "IRS Positions (" << irs->GetId() << ") : " << irs->GetObject<MobilityModel>()->GetPosition() << std::endl;
+        Ptr<Node> node = *irsNode;
+        Ptr<Irs> irs = node->GetObject<Irs>();
+        std::cout << "IRS Positions (" << node->GetId() << ") : " << node->GetObject<MobilityModel>()->GetPosition() << std::endl;
+        uint16_t in_angle = 20;
+        uint16_t out_angle = 20;
+        IrsEntry entry = irs->GetIrsEntry(in_angle, out_angle);
+        std::cout << "IRS Lookup test: in/out angle: " << in_angle << " " << out_angle << " gain: " << entry.gain << " phase_shift: " << entry.phase_shift << std::endl;
     }
     return 0.0;
 }

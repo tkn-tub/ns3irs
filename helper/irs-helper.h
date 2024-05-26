@@ -1,10 +1,11 @@
 #ifndef IRS_HELPER_H
 #define IRS_HELPER_H
 
+#include "irs-lookup-helper.h"
+
 #include "ns3/irs.h"
 #include "ns3/node-container.h"
 #include "ns3/object-factory.h"
-#include "lookup-structs.h"
 
 #include <cstdint>
 #include <unordered_map>
@@ -24,11 +25,13 @@ class IrsHelper
     void InstallAll() const;
 
     void SetLookupTable(std::string filename);
-    void SetLookupTable(Ptr<std::unordered_map<std::pair<uint8_t, uint8_t>, IrsEntry, hash_tuple>> table);
+    void SetLookupTable(Ptr<IrsLookupTable> table);
+
+    void SetDirection(Vector direction);
   private:
-    std::string m_filename;
-    ObjectFactory m_irsFactory;
-    std::unordered_map<std::pair<uint8_t, uint8_t>, IrsEntry, hash_tuple> m_irsLookupTable;
+    ObjectFactory m_irs;
+    Ptr<IrsLookupTable> m_irsLookupTable;
+    Vector m_direction;
 };
 }
 
