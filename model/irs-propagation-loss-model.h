@@ -29,17 +29,33 @@ class IrsPropagationLossModel : public PropagationLossModel
     double CalcRxPower(double txPowerDbm, Ptr<MobilityModel> a, Ptr<MobilityModel> b) const override;
 
   private:
+    void SetFrequency(double frequency);
+    double GetFrequency() const;
+
+    void SetIrsNodes(Ptr<NodeContainer> nodes);
+    Ptr<NodeContainer> GetIrsNodes() const;
+
+    void SetPropagationModel(Ptr<PropagationLossModel> model);
+    Ptr<PropagationLossModel> GetPropagatioModel() const;
+
+    double DbmToW(double dbm) const;
+    double DbmFromW(double w) const;
+
+    double CalcAngle(ns3::Vector a, ns3::Vector b, ns3::Vector n) const;
+
     double DoCalcRxPower(double txPowerDbm,
                          Ptr<MobilityModel> a,
                          Ptr<MobilityModel> b) const override;
 
+
     int64_t DoAssignStreams(int64_t stream) override;
 
     Ptr<NodeContainer> m_irsNodes;
-    Ptr<PropagationDelayModel> m_delayModel;
     Ptr<PropagationLossModel> m_lossModel;
+    double m_frequency;
+    double m_lambda;
 };
 
 } // namespace ns3
 
-#endif // NS3_IRS_PROPAGATION_LOSS_MODEL_H
+#endif // IRS_PROPAGATION_LOSS_MODEL_H

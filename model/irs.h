@@ -25,7 +25,7 @@ class Irs : public Object
     Irs();
     ~Irs() override;
 
-    IrsEntry GetIrsEntry(uint16_t in_angle, uint16_t out_angle) const;
+    IrsEntry GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const;
 
     void SetLookupTable(Ptr<IrsLookupTable> table);
     Ptr<IrsLookupTable> GetLookupTable() const;

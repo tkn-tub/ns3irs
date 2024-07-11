@@ -1,6 +1,7 @@
 #include "irs.h"
 
 #include "ns3/pointer.h"
+#include <cstdint>
 
 namespace ns3
 {
@@ -38,7 +39,7 @@ Irs::~Irs()
 }
 
 IrsEntry
-Irs::GetIrsEntry(uint16_t in_angle, uint16_t out_angle) const
+Irs::GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const
 {
     return m_irsLookupTable->GetIrsEntry(in_angle, out_angle);
 }

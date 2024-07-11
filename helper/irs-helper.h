@@ -7,9 +7,6 @@
 #include "ns3/node-container.h"
 #include "ns3/object-factory.h"
 
-#include <cstdint>
-#include <unordered_map>
-
 namespace ns3
 {
 

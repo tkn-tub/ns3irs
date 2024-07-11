@@ -23,7 +23,8 @@ function ris_lookup_table = generate_ris_lookup_table(optimal_in_angle, optimal_
         'MaximumDistanceSource','Property','MaximumDistance',500);
 
     % Define angle range for lookup table
-    angles = -89:1:89;
+    % angles = -89:1:89;
+    angles = 1:1:179;
 
     % Preallocate results array
     num_angles = length(angles);
@@ -54,13 +55,13 @@ function ris_lookup_table = generate_ris_lookup_table(optimal_in_angle, optimal_
             pos_ap = [d2_ris*cosd(in_angle); d2_ris*sind(in_angle); 0];
             pos_ue = [d2_ris*cosd(out_angle); d2_ris*sind(out_angle); 0];
 
-            % Compute angles for RIS
-            [~, ang_ap_ris] = rangeangle(pos_ap, pos_ris);
-            [~, ang_ue_ris] = rangeangle(pos_ue, pos_ris);
+            % Compute angles for RIS - Debug purpose
+            % [~, ang_ap_ris] = rangeangle(pos_ap, pos_ris);
+            % [~, ang_ue_ris] = rangeangle(pos_ue, pos_ris);
 
             % Apply RIS phase control (optimized for optimal constellation) and simulate paths
             x_ris_in = chanAPToRIS(xt, pos_ap, pos_ris, v, v);
-            x_ris_out = ris(x_ris_in, ang_ap_ris, ang_ue_ris, rcoeff_ris_optimal);
+            x_ris_out = ris(x_ris_in, in_angle, out_angle, rcoeff_ris_optimal);
 
             % Calculate gain
             in_power = pow2db(bandpower(x_ris_in));
@@ -85,8 +86,8 @@ function ris_lookup_table = generate_ris_lookup_table(optimal_in_angle, optimal_
     ris_lookup_table = array2table(results, 'VariableNames', {'in_angle', 'out_angle', 'gain_dB', 'phase_shift'});
 end
 % Generate the lookup table
-in = -45;
-out = 45;
+in = 170;
+out = 10;
 ris_table = generate_ris_lookup_table(in, out);
 
 % Create matrices of the gain and phase shift
@@ -116,3 +117,10 @@ ylabel('Ingoing Angle (degrees)');
 title('Phase Shift (degrees)');
 
 sgtitle(sprintf('RIS Performance - Optimized for (%d°, %d°)', in, out));
+
+filename = 'lookuptable.csv';
+
+writetable(ris_table, filename, 'Delimiter', ',', 'WriteRowNames', true);
+
+% Display a message to confirm the export
+disp(['Table has been exported to ', filename]);

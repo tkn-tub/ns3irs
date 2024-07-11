@@ -2,6 +2,7 @@
 
 #include "ns3/names.h"
 
+#include <cstdint>
 #include <fstream>
 
 namespace ns3
@@ -88,7 +89,7 @@ IrsHelper::SetLookupTable(std::string filename)
     {
         std::stringstream ss(line);
         std::string item;
-        uint16_t in_angle, out_angle;
+        uint8_t in_angle, out_angle;
         double gain, phase_shift;
 
         // Read each value separated by comma

@@ -3,6 +3,7 @@
 
 #include "ns3/object.h"
 #include "ns3/ptr.h"
+#include <cstdint>
 
 struct IrsEntry
 {
@@ -12,13 +13,13 @@ struct IrsEntry
 
 struct hash_tuple
 {
-    std::size_t operator()(const std::pair<uint16_t, uint16_t>& p) const
+    std::size_t operator()(const std::pair<uint8_t, uint8_t>& p) const
     {
         // Combine the two 16-bit integers into a 32-bit integer
-        uint32_t combined = (((uint32_t) p.first) << 16) | ((uint32_t) p.second);
+        uint16_t combined = (((uint16_t) p.first) << 8) | ((uint16_t) p.second);
 
         // Use a simple hash function, e.g., MurmurHash3 finalizer
-        return std::hash<uint32_t>{}(combined);
+        return std::hash<uint16_t>{}(combined);
     }
 };
 
@@ -31,12 +32,12 @@ class IrsLookupTable : public Object
 
     IrsLookupTable();
 
-    void Insert(uint16_t in_angle, uint16_t out_angle, double gain, double phase_shift);
+    void Insert(uint8_t in_angle, uint8_t out_angle, double gain, double phase_shift);
 
-    IrsEntry GetIrsEntry(uint16_t in_angle, uint16_t out_angle) const;
+    IrsEntry GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const;
 
   private:
-    std::unordered_map<std::pair<uint16_t, uint16_t>, IrsEntry, hash_tuple> m_irsLookupTable;
+    std::unordered_map<std::pair<uint8_t, uint8_t>, IrsEntry, hash_tuple> m_irsLookupTable;
 };
 } // namespace ns3
 #endif // IRS_LOOKUP_HELPER_H

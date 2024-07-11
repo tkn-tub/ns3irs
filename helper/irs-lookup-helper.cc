@@ -1,4 +1,5 @@
 #include "irs-lookup-helper.h"
+#include <cstdint>
 
 namespace ns3
 {
@@ -16,13 +17,13 @@ IrsLookupTable::IrsLookupTable()
 }
 
 void
-IrsLookupTable::Insert(uint16_t in_angle, uint16_t out_angle, double gain, double phase_shift)
+IrsLookupTable::Insert(uint8_t in_angle, uint8_t out_angle, double gain, double phase_shift)
 {
     m_irsLookupTable[{in_angle, out_angle}] = {gain, phase_shift};
 }
 
 IrsEntry
-IrsLookupTable::GetIrsEntry(uint16_t in_angle, uint16_t out_angle) const
+IrsLookupTable::GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const
 {
     auto key = std::make_pair(in_angle, out_angle);
     auto it = m_irsLookupTable.find(key);
