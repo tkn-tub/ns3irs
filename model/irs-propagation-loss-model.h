@@ -42,6 +42,7 @@ class IrsPropagationLossModel : public PropagationLossModel
     double DbmFromW(double w) const;
 
     double CalcAngle(ns3::Vector a, ns3::Vector b, ns3::Vector n) const;
+    double WrapToPi(double angle) const;
 
     double DoCalcRxPower(double txPowerDbm,
                          Ptr<MobilityModel> a,

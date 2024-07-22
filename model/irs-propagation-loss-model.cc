@@ -1,5 +1,8 @@
 #include "irs-propagation-loss-model.h"
 
+#include "ns3/wifi-phy.h"
+#include "ns3/wifi-net-device.h"
+#include "ns3/channel.h"
 #include "irs.h"
 
 #include "ns3/angles.h"
@@ -8,15 +11,14 @@
 #include "ns3/mobility-model.h"
 #include "ns3/object-factory.h"
 #include "ns3/pointer.h"
+#include "ns3/constant-position-mobility-model.h"
 
 #include <cmath>
 #include <complex>
 #include <cstdint>
-#include <cstdlib>
+#include <functional>
 #include <iostream>
-#include <math.h>
 #include <ostream>
-#include <regex>
 
 namespace ns3
 {
@@ -115,6 +117,21 @@ IrsPropagationLossModel::CalcAngle(ns3::Vector A, ns3::Vector B, ns3::Vector N) 
 }
 
 double
+IrsPropagationLossModel::WrapToPi(double angle) const {
+    // Wrap the angle to the range -2*pi to 2*pi
+    angle = fmod(angle, 2.0 * M_PI);
+
+    // Wrap the angle to the range -pi to pi
+    if (angle > M_PI) {
+        angle -= 2.0 * M_PI;
+    } else if (angle < -M_PI) {
+        angle += 2.0 * M_PI;
+    }
+
+    return angle;
+}
+
+double
 IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
                                      Ptr<ns3::MobilityModel> a,
                                      Ptr<ns3::MobilityModel> b) const
@@ -122,6 +139,23 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
     // complex envelope of recieved signal
     std::complex<double> r(0.0, 0.0);
 
+    // --------------------
+    Ptr<Node> nodeA = a->GetObject<Node> ();
+    if (nodeA) {
+        Ptr<NetDevice> device = nodeA->GetDevice(0);
+        Ptr<WifiNetDevice> wifiNetDevice = DynamicCast<WifiNetDevice>(device);
+        Ptr<Channel> channel = wifiNetDevice->GetChannel();
+        Ptr<WifiPhy> wifiPhy = wifiNetDevice->GetPhy();
+        std::cout << "Frequency: " << wifiPhy->GetFrequency() << std::endl;
+        std::cout << "m_frequency: " << m_frequency << std::endl;
+    }
+
+
+
+
+    // -------------------------
+
+    std::cout << "txPower: " << txPowerDbm << std::endl;
     for (auto irsNode = m_irsNodes->Begin(); irsNode != m_irsNodes->End(); irsNode++)
     {
         Ptr<Node> node = *irsNode;
@@ -134,13 +168,13 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
                                     irs->GetObject<MobilityModel>()->GetPosition(),
                                     irs->GetObject<Irs>()->GetDirection());
 
-        std::cout << "IRS Position (" << node->GetId()
-                  << ") : " << node->GetObject<MobilityModel>()->GetPosition() << std::endl;
-        std::cout << "TX Position: " << a->GetPosition() << std::endl;
-        std::cout << "RX Position: " << b->GetPosition() << std::endl;
-        std::cout << "IRS Direction: " << node->GetObject<Irs>()->GetDirection() << std::endl;
-        std::cout << "Ingoing Angle: " << inAngle << " degrees" << std::endl;
-        std::cout << "Outgoing Angle: " << outAngle << " degrees" << std::endl;
+        // std::cout << "IRS Position (" << node->GetId()
+                  // << ") : " << node->GetObject<MobilityModel>()->GetPosition() << std::endl;
+        // std::cout << "TX Position: " << a->GetPosition() << std::endl;
+        // std::cout << "RX Position: " << b->GetPosition() << std::endl;
+        // std::cout << "IRS Direction: " << node->GetObject<Irs>()->GetDirection() << std::endl;
+        // std::cout << "Ingoing Angle: " << inAngle << " degrees" << std::endl;
+        // std::cout << "Outgoing Angle: " << outAngle << " degrees" << std::endl;
 
         // if the incoming angle is < 1 or > 179, then the IRS is not in the line of sight
         if (inAngle < 1 || inAngle > 179 || outAngle < 1 || outAngle > 179)
@@ -154,48 +188,70 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
         IrsEntry modifier =
             irs->GetLookupTable()->GetIrsEntry(std::round(inAngle), std::round(outAngle));
 
-        // pathloss tx to irs
-        double pl_irs = m_lossModel->CalcRxPower(txPowerDbm, a, node->GetObject<MobilityModel>());
-        std::cout << pl_irs << std::endl;
-        // gain of irs
-        pl_irs += modifier.gain;
-        std::cout << pl_irs << std::endl;
-        // pathloss irs to rx
-        pl_irs = m_lossModel->CalcRxPower(pl_irs, node->GetObject<MobilityModel>(), b);
-        std::cout << pl_irs << std::endl;
-        std::cout << "db only irs: " << pl_irs << std::endl;
-
-        // TODO: error model
-
         // distance of irs path
         double d = a->GetDistanceFrom(node->GetObject<MobilityModel>()) +
-                   node->GetObject<MobilityModel>()->GetDistanceFrom(b);
-        std::cout << d << std::endl;
-        // calculate phase of irs path
-        double theta = (2 * M_PI * d) / m_lambda;
-        // include phaseshift of irs
-        theta += modifier.phase_shift;
+            node->GetObject<MobilityModel>()->GetDistanceFrom(b);
+        // std::cout << "distance over IRS: " << d << std::endl;
 
-        // phase theta to complex
-        std::complex<double> phase_irs(0.0, theta);
+        // pathloss tx to irs
+        double pl_irs = m_lossModel->CalcRxPower(txPowerDbm, a, node->GetObject<MobilityModel>());
+        std::cout << "pl tx to irs: " << pl_irs << std::endl;
+        // gain of irs
+        pl_irs += modifier.gain;
+        std::cout << "pl with irs gain: " << pl_irs << std::endl;
+        // pathloss irs to rx
+        pl_irs = m_lossModel->CalcRxPower(pl_irs, node->GetObject<MobilityModel>(), b);
+        // pl_irs += 46.6777;
+        std::cout << "pl irs to rx: " << pl_irs << std::endl;
+
+
+        // Get the position of 'b'
+        // Vector posB = b->GetPosition();
+        // Vector newPos = Vector(posB.x + d, posB.y, posB.z);
+        // Create a new ConstantPositionMobilityModel
+        // Ptr<ConstantPositionMobilityModel> refPos = CreateObject<ConstantPositionMobilityModel>();
+        // refPos->SetPosition(newPos);
+
+        // Calc PL first and then add gain
+        // double pl_irs = m_lossModel->CalcRxPower(txPowerDbm, refPos, b);
+        // pl_irs += modifier.gain;
 
         // convert dBm to watts
         pl_irs = DbmToW(pl_irs);
+        // TODO: error model
+
+        // calculate phase of irs path
+        double theta = (2 * M_PI * d) / m_lambda; // in radians
+        // add phase shift of irs to theta
+        theta += modifier.phase_shift;
+        // wrap to pi
+        theta = WrapToPi(theta);
+        // theta to complex
+        std::complex<double> phase_irs(0.0, theta);
+        // std::cout << "phase irs: " << phase_irs << std::endl;
 
         // add irs path to
         r += std::sqrt(pl_irs) * std::exp(phase_irs);
     }
+    std::cout << "rx power only ris: " << DbmFromW(std::pow(std::abs(r), 2)) << std::endl;
 
     Ptr<PropagationLossModel> next = GetNext();
     if (next)
     {
+        // calculate amplitude
         double pl_other = next->CalcRxPower(txPowerDbm, a, b);
-
-        double theta = (2 * M_PI * a->GetDistanceFrom(b)) / m_lambda;
-        std::cout << a->GetDistanceFrom(b) << std::endl;
-        std::complex<double> phase_other(0.0, theta);
+        std::cout << "pl_other: " << pl_other << std::endl;
         pl_other = DbmToW(pl_other);
-        // r += std::sqrt(pl_other) * std::exp(phase_other);
+
+        // calculate phase
+        double theta = (2 * M_PI * a->GetDistanceFrom(b)) / m_lambda;
+        theta = WrapToPi(theta);
+        std::complex<double> phase_other(0.0, theta);
+        // std::cout << "phase los: " << phase_other << std::endl;
+
+        // std::cout << "distance LOS: " << a->GetDistanceFrom(b) << std::endl;
+
+        r += std::sqrt(pl_other) * std::exp(phase_other);
     }
     else
     {
@@ -203,11 +259,8 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
     }
 
     // recieved power
-    std::cout << "db result: " << DbmFromW(std::pow(std::abs(r), 2)) << std::endl;
-    std::cout << "direct db: " << next->CalcRxPower(txPowerDbm, a, b) << std::endl;
-    std::cout << "only irs" << std::endl;
+    std::cout << "resulting rx power in db: " << DbmFromW(std::pow(std::abs(r), 2)) << std::endl;
     return DbmFromW(std::pow(std::abs(r), 2));
-    // return next->CalcRxPower(txPowerDbm, a, b);
 }
 
 double
