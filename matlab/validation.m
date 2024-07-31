@@ -15,10 +15,10 @@ ris = helperRISSurface('Size',[Nr Nc],'ElementSpacing',[dr dc],...
     'ReflectorElement',phased.IsotropicAntennaElement,'OperatingFrequency',fc);
 
 % scene
-pos_ap = [-7.0711;7.0711;0];
+pos_ap = [-14.1421;14.1421;0];
 pos_ris = [0;0;0];
 % pos_ue = [0.3536;0.3536;0];
-d_rx = 2.5;
+d_rx = 1.5;
 pos_ue = pos_ris + [d_rx*cosd(45); d_rx*sind(45); 0]
 
 v = zeros(3,1);
@@ -26,8 +26,6 @@ v = zeros(3,1);
 % compute the range and angle of the RIS from the base station and the UE
 [r_ap_ris,ang_ap_ris] = rangeangle(pos_ap,pos_ris);
 [r_ue_ris,ang_ue_ris] = rangeangle(pos_ue,pos_ris);
-% ang_ap_ris = 135;
-% ang_ue_ris = 15;
 
 % signal
 fs = 10e6;

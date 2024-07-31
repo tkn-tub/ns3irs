@@ -1,8 +1,8 @@
 pos_ris = [0; 0; 0];
 angles = 1:1:179;
 d2_ris = 10;
-d_tx = 10;
-d_rx = 2.5;
+d_tx = 20;
+d_rx = 1.5;
 
 optimal_in_angle = 135;
 optimal_out_angle = 45;

@@ -14,13 +14,23 @@
 #include "ns3/yans-wifi-helper.h"
 #include "ns3/yans-wifi-phy.h"
 
+#include <cmath>
 #include <iostream>
 #include <string>
 #include <vector>
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("IrsCompareMatlab");
+NS_LOG_COMPONENT_DEFINE("IrsValidateChangingSizes");
+
+struct SimulationResult
+{
+    double ueDistance;
+    std::map<std::string, double> rxPower;
+};
+
+std::vector<SimulationResult> simulationResults;
+std::string currentSimulationContext;
 
 void
 ReceivePacket(Ptr<Socket> socket)
@@ -59,8 +69,12 @@ RCallback(std::string context,
           SignalNoiseDbm signalNoise,
           uint16_t staId)
 {
-    std::cout << "SNR: " << signalNoise.signal - signalNoise.noise << std::endl;
-    std::cout << "signal: " << signalNoise.signal << " noise: " << signalNoise.noise << std::endl;
+    // std::cout << "SNR: " << signalNoise.signal - signalNoise.noise << std::endl;
+    // std::cout << "signal: " << signalNoise.signal << " noise: " << signalNoise.noise <<
+    // std::endl; Store the received signal power
+    simulationResults.back().rxPower[currentSimulationContext] = signalNoise.signal;
+    std::cout << "DEBUG: rx_power: " << signalNoise.signal << std::endl;
+    std::cout << "DEBUG: context" << currentSimulationContext << std::endl;
 }
 
 void
@@ -73,7 +87,7 @@ Receive(Ptr<const WifiPsdu> psdu,
 }
 
 void
-RunSimulation(std::string scenario)
+RunSimulation(std::string lookupTable, bool useRisOnly, double ueDistance)
 {
     std::string phyMode("OfdmRate6Mbps");
     uint32_t packetSize = 1000; // bytes
@@ -88,8 +102,8 @@ RunSimulation(std::string scenario)
 
     IrsHelper irsHelper;
     irsHelper.SetDirection(Vector(1, 0, 0));
-    irsHelper.SetLookupTable(
-        "/home/jrueh/Studium/tkn_thesis/ns-3-dev/contrib/irs/matlab/lookuptable.csv");
+    irsHelper.SetLookupTable("/home/jrueh/Studium/tkn_thesis/ns-3-dev/contrib/irs/matlab/" +
+                             lookupTable);
     irsHelper.Install(irs);
 
     WifiHelper wifi;
@@ -102,33 +116,17 @@ RunSimulation(std::string scenario)
     YansWifiChannelHelper wifiChannel;
     wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
 
-    if (scenario == "IRS")
-    {
-        Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
-        irsLossModel->SetFrequency(5.21e9);
-        wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
-                                       "IrsNodes",
-                                       PointerValue(&irs),
-                                       "LossModel",
-                                       PointerValue(irsLossModel),
-                                       "Frequency",
-                                       DoubleValue(5.21e9));
-        wifiChannel.AddPropagationLoss("ns3::FriisPropagationLossModel",
-                                       "Frequency",
-                                       DoubleValue(5.21e9));
-    }
-    else if (scenario == "IRSnlos")
-    {
-        Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
-        wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
-                                       "IrsNodes",
-                                       PointerValue(&irs),
-                                       "LossModel",
-                                       PointerValue(irsLossModel),
-                                       "Frequency",
-                                       DoubleValue(5.21e9));
-    }
-    else if (scenario == "los")
+    Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
+    irsLossModel->SetFrequency(5.21e9);
+    wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
+                                   "IrsNodes",
+                                   PointerValue(&irs),
+                                   "LossModel",
+                                   PointerValue(irsLossModel),
+                                   "Frequency",
+                                   DoubleValue(5.21e9));
+
+    if (!useRisOnly)
     {
         wifiChannel.AddPropagationLoss("ns3::FriisPropagationLossModel",
                                        "Frequency",
@@ -148,13 +146,27 @@ RunSimulation(std::string scenario)
 
     MobilityHelper mobility;
     Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
-    positionAlloc->Add(Vector(1.0607, 1.0607, 0.0));  // RX
-    positionAlloc->Add(Vector(-14.1421, 14.1421, 0)); // TX
+
+    // RIS position (always at 0,0,0)
     positionAlloc->Add(Vector(0.0, 0.0, 0.0));
+
+    // UE position
+    double risToUeAngle = 10.0; // You can change this if needed
+    double ueX = ueDistance * std::cos(risToUeAngle * M_PI / 180.0);
+    double ueY = ueDistance * std::sin(risToUeAngle * M_PI / 180.0);
+    positionAlloc->Add(Vector(ueX, ueY, 0.0));
+
+    // AP position
+    double apDistance = 20.0;
+    double apToRisAngle = 170.0; // You can change this if needed
+    double apX = apDistance * std::cos(apToRisAngle * M_PI / 180.0);
+    double apY = apDistance * std::sin(apToRisAngle * M_PI / 180.0);
+    positionAlloc->Add(Vector(apX, apY, 0.0));
+
     mobility.SetPositionAllocator(positionAlloc);
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    mobility.Install(nodes);
     mobility.Install(irs);
+    mobility.Install(nodes);
 
     InternetStackHelper internet;
     internet.Install(nodes);
@@ -182,7 +194,7 @@ RunSimulation(std::string scenario)
     Config::Set("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::YansWifiPhy/TxPowerStart",
                 DoubleValue(17)); // dBm
     Config::Set("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::YansWifiPhy/TxPowerEnd",
-                DoubleValue(17)); // dBm$
+                DoubleValue(17)); // dBm
 
     Simulator::ScheduleWithContext(source->GetNode()->GetId(),
                                    Seconds(1.0),
@@ -196,17 +208,78 @@ RunSimulation(std::string scenario)
     Simulator::Destroy();
 }
 
+void writeResultsToCSV(const std::string& filename, std::vector<std::string> lookupTables)
+{
+    std::ofstream file(filename);
+    if (!file.is_open())
+    {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+        return;
+    }
+
+    // Write header
+    file << "ueDistance";
+    for (const auto& lookupTable : lookupTables)
+    {
+        file << "," << lookupTable << "_ris," << lookupTable << "_ris_los";
+    }
+    file << "\n";
+
+    // Write data
+    for (const auto& result : simulationResults)
+    {
+        file << result.ueDistance;
+        for (const auto& lookupTable : lookupTables)
+        {
+            std::string risKey = lookupTable + "_ris";
+            std::string risLosKey = lookupTable + "_ris_los";
+            file << "," << (result.rxPower.count(risKey) ? result.rxPower.at(risKey) : 0)
+                 << "," << (result.rxPower.count(risLosKey) ? result.rxPower.at(risLosKey) : 0);
+        }
+        file << "\n";
+    }
+
+    file.close();
+}
+
 int
 main(int argc, char* argv[])
 {
-    std::vector<std::string> scenarios = {"IRS", "IRSnlos", "los"};
-
-    for (const auto& model : scenarios)
+    std::vector<std::string> lookupTables = {"IRS_100_IN170_OUT10_FREQ5.21GHz.csv",
+                                             "IRS_200_IN170_OUT10_FREQ5.21GHz.csv",
+                                             "IRS_300_IN170_OUT10_FREQ5.21GHz.csv",
+                                             "IRS_400_IN170_OUT10_FREQ5.21GHz.csv"};
+    std::vector<bool> risOnlyScenarios = {true, false};
+    std::vector<double> ueDistances;
+    for (double d = 0.25; d <= 10.0; d += 0.1)
     {
-        std::cout << "Running simulation with " << model << " propagation model" << std::endl;
-        RunSimulation(model);
-        std::cout << "-----------------------------------" << std::endl;
+        ueDistances.push_back(d);
     }
+
+    for (double ueDistance : ueDistances)
+    {
+        SimulationResult result;
+        result.ueDistance = ueDistance;
+        simulationResults.push_back(result);
+
+        for (const auto& lookupTable : lookupTables)
+        {
+            for (bool useRisOnly : risOnlyScenarios)
+            {
+                std::cout << "Running simulation with:" << std::endl;
+                std::cout << "Lookup table: " << lookupTable << std::endl;
+                std::cout << "RIS only: " << (useRisOnly ? "Yes" : "No") << std::endl;
+                std::cout << "UE distance: " << ueDistance << std::endl;
+
+                currentSimulationContext = lookupTable + (useRisOnly ? "_ris" : "_ris_los");
+                RunSimulation(lookupTable, useRisOnly, ueDistance);
+
+                std::cout << "-----------------------------------" << std::endl;
+            }
+        }
+    }
+
+    writeResultsToCSV("simulation_results.csv", lookupTables);
 
     return 0;
 }

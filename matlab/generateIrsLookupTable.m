@@ -1,13 +1,15 @@
-function ris_lookup_table = generate_ris_lookup_table(optimal_in_angle, optimal_out_angle)
+function ris_table = generateIrsLookupTable(optimal_in_angle, optimal_out_angle, Nr, Nc, fc)
+% generate_ris_lookup_table
+%   optimal_in_angle, optimal_out_angle - angles the RIS is optimized for
+%   Nr, Nc - number of rows/columns of the RIS
+%   fc - carrier frequency
+
     % Set up parameters
-    fc = 5.21e9; % Carrier frequency
     c = physconst('lightspeed');
     lambda = c/fc;
     fs = 10e6; % Sample rate
 
     % Setup 
-    Nr = 10; % Number of rows
-    Nc = 20; % Number of columns
     dr = 0.5*lambda; % Row spacing
     dc = 0.5*lambda; % Column spacing
     % x = 2*randi(2,[100 1])-3;
@@ -76,44 +78,12 @@ function ris_lookup_table = generate_ris_lookup_table(optimal_in_angle, optimal_
     end
 
     % Convert to table
-    ris_lookup_table = array2table(results, 'VariableNames', {'in_angle', 'out_angle', 'gain_dB', 'phase_shift'});
+    ris_table = array2table(results, 'VariableNames', {'in_angle', 'out_angle', 'gain_dB', 'phase_shift'});
+
+    filename = sprintf('IRS_%d_IN%d_OUT%d_FREQ%.2fGHz.csv', Nr*Nc, optimal_in_angle, optimal_out_angle, fc/1e9);
+    
+    writetable(ris_table, filename, 'Delimiter', ',', 'WriteRowNames', true);
+    
+    % Display a message to confirm the export
+    disp(['Table has been exported to ', filename]);
 end
-% Generate the lookup table
-in = 135;
-out = 45;
-ris_table = generate_ris_lookup_table(in, out);
-
-% Create matrices of the gain and phase shift
-out_angles = unique(ris_table.out_angle);
-in_angles = unique(ris_table.in_angle);
-gain_matrix = reshape(ris_table.gain_dB, length(out_angles), length(in_angles));
-phase_matrix = reshape(ris_table.phase_shift, length(out_angles), length(in_angles));
-
-threshold = 0.06; % in percent
-cleaned_gain_matrix = clear_low_gain_values(gain_matrix, threshold);
-
-% Plot gain heatmap
-figure;
-subplot(1,2,1);
-imagesc(out_angles, in_angles, cleaned_gain_matrix');
-colorbar;
-xlabel('Outgoing Angle (degrees)');
-ylabel('Ingoing Angle (degrees)');
-title('RIS Gain (dB)');
-
-% Plot phase shift heatmap
-subplot(1,2,2);
-imagesc(out_angles, in_angles, phase_matrix');
-colorbar;
-xlabel('Outgoing Angle (degrees)');
-ylabel('Ingoing Angle (degrees)');
-title('Phase Shift (radians)');
-
-sgtitle(sprintf('RIS Performance - Optimized for (%d°, %d°)', in, out));
-
-filename = 'lookuptable.csv';
-
-writetable(ris_table, filename, 'Delimiter', ',', 'WriteRowNames', true);
-
-% Display a message to confirm the export
-disp(['Table has been exported to ', filename]);

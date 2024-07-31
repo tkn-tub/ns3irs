@@ -5,7 +5,7 @@ rng(2024);
 fs = 10e6;
 
 % Setup surface
-Nr = 10;
+Nr = 25;
 Nc = 20;
 dr = 0.5*lambda;
 dc = 0.5*lambda;
@@ -59,18 +59,18 @@ for i = 1:length(x_ris_range)
     x_ris_in = chanAPToRIS(xt,pos_ap,pos_ris,v,v);
     x_ris_out = ris(x_ris_in,ang_ap_ris,ang_ue_ris,rcoeff_ris);
     ylosris = chanRISToUE(x_ris_out,pos_ris,pos_ue,v,v) + chanAPToUE(xt,pos_ap,pos_ue,v,v);
-    RXpowerRis = pow2db(bandpower(ylosris)) - noise - txPower;
+    RXpowerRis = pow2db(bandpower(ylosris)) - txPower;
     
     ylosris = chanRISToUE(x_ris_out,pos_ris,pos_ue,v,v);
-    RXpowerOnlyRis = pow2db(bandpower(ylosris)) - noise - txPower;
+    RXpowerOnlyRis = pow2db(bandpower(ylosris)) - txPower;
     
     % LOS path propagation
     yref = chanAPToUE(xt,pos_ap,pos_ue,v,v);
-    RXpowerLos = pow2db(bandpower(yref)) - noise - txPower;
+    RXpowerLos = pow2db(bandpower(yref)) - txPower;
 
     risA = 1;
     RXPowerRisETSI = -pow2db(((4*pi*r_ap_ris*r_ue_ris)/(prod([Nr, Nc])*dr*dc*risA)).^2);
-    RXPowerRisETSI = RXPowerRisETSI - noise - txPower;
+    RXPowerRisETSI = RXPowerRisETSI - txPower;
     ris_etsi_array(i) = RXPowerRisETSI;
 
     onlyris_array(i) = RXpowerOnlyRis;
@@ -78,10 +78,10 @@ for i = 1:length(x_ris_range)
     los_array(i) = RXpowerLos;
 
 end
-% difference = onlyris_array - ris_etsi_array;
-% mean_diff = mean(difference) % -9.942999727847097
+difference = onlyris_array - ris_etsi_array;
+mean_diff = mean(difference) % -9.942999727847097
 
-ris_etsi2_array = ris_etsi_array-9.9429;
+onlyris_2_array = onlyris_array+9.9429;
 
 % Plot the results
 figure;
@@ -91,13 +91,14 @@ plot(x_ris_range, ris_array, 'r', 'LineWidth', 2);
 plot(x_ris_range, los_array, 'g--', 'LineWidth', 2);
 plot(x_ris_range, onlyris_array, 'b', 'LineWidth', 2);
 plot(x_ris_range, ris_etsi_array, 'c', 'LineWidth', 2);
-plot(x_ris_range, ris_etsi2_array, 'm--', 'LineWidth', 2);
+plot(x_ris_range, onlyris_2_array, 'm--', 'LineWidth', 2);
+plot(x_ris_range, ris_array-mean_diff, 'y', 'LineWidth', 2);
 
-difference = onlyris_array - ris_etsi2_array;
+difference = onlyris_array - onlyris_2_array;
 max_diff = max(difference)
 mean_diff = mean(difference)
 xlabel('x pos [m]');
 ylabel('Received Power [dB]');
-title('SNR vs. Position of RIS');
-legend('RIS + LOS', 'LOS', 'RIS', 'RIS ETSI', 'RIS ETSI - 9.94 dB');
+title('Rx Power vs. Position of RIS');
+legend('RIS + LOS', 'LOS', 'RIS', 'RIS ETSI', 'RIS + 9.94 dB', 'RIS + LOS + 9.94 dB');
 grid on;
