@@ -5,10 +5,11 @@ rng(2024);
 fs = 10e6;
 
 % Setup surface
-Nr = 25;
+Nr = 20;
 Nc = 20;
 dr = 0.5*lambda;
 dc = 0.5*lambda;
+element_size = (lambda^2)/(4*pi);
 
 txPower = -17;
 noise = -93.966;
@@ -69,7 +70,7 @@ for i = 1:length(x_ris_range)
     RXpowerLos = pow2db(bandpower(yref)) - txPower;
 
     risA = 1;
-    RXPowerRisETSI = -pow2db(((4*pi*r_ap_ris*r_ue_ris)/(prod([Nr, Nc])*dr*dc*risA)).^2);
+    RXPowerRisETSI = -pow2db(((4*pi*r_ap_ris*r_ue_ris)/(prod([Nr, Nc])*element_size*risA)).^2);
     RXPowerRisETSI = RXPowerRisETSI - txPower;
     ris_etsi_array(i) = RXPowerRisETSI;
 
@@ -78,10 +79,7 @@ for i = 1:length(x_ris_range)
     los_array(i) = RXpowerLos;
 
 end
-difference = onlyris_array - ris_etsi_array;
-mean_diff = mean(difference) % -9.942999727847097
-
-onlyris_2_array = onlyris_array+9.9429;
+mean_diff = mean(onlyris_array - ris_etsi_array) % -9.942999727847097
 
 % Plot the results
 figure;
@@ -90,15 +88,11 @@ hold on;
 plot(x_ris_range, ris_array, 'r', 'LineWidth', 2);
 plot(x_ris_range, los_array, 'g--', 'LineWidth', 2);
 plot(x_ris_range, onlyris_array, 'b', 'LineWidth', 2);
-plot(x_ris_range, ris_etsi_array, 'c', 'LineWidth', 2);
-plot(x_ris_range, onlyris_2_array, 'm--', 'LineWidth', 2);
-plot(x_ris_range, ris_array-mean_diff, 'y', 'LineWidth', 2);
+plot(x_ris_range, ris_etsi_array, 'c--', 'LineWidth', 2);
+% plot(x_ris_range, onlyris_array-mean_diff, 'm--', 'LineWidth', 2);
 
-difference = onlyris_array - onlyris_2_array;
-max_diff = max(difference)
-mean_diff = mean(difference)
 xlabel('x pos [m]');
 ylabel('Received Power [dB]');
-title('Rx Power vs. Position of RIS');
-legend('RIS + LOS', 'LOS', 'RIS', 'RIS ETSI', 'RIS + 9.94 dB', 'RIS + LOS + 9.94 dB');
+title(sprintf('Rx Power vs. Position of RIS for N = %d (%d x %d)', Nr*Nc, Nr, Nc));
+legend('RIS + LOS', 'LOS', 'RIS', 'RIS ETSI');
 grid on;
