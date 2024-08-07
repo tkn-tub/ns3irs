@@ -1,4 +1,4 @@
-function plt = plotIrsLookupTable(ris_table)
+function plt = plotIrsLookupTable(ris_table, opt_in_angle, opt_out_angle)
     % Create matrices of the gain and phase shift
     out_angles = unique(ris_table.out_angle);
     in_angles = unique(ris_table.in_angle);
@@ -25,5 +25,5 @@ function plt = plotIrsLookupTable(ris_table)
     ylabel('Ingoing Angle (degrees)');
     title('Phase Shift (radians)');
     
-    sgtitle(sprintf('RIS Performance - Optimized for (%d°, %d°)', in, out));
+    sgtitle(sprintf('RIS Performance - Optimized for (%d, %d)', opt_in_angle, opt_out_angle));
 end
