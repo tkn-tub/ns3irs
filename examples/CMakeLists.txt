@@ -17,3 +17,15 @@ build_lib_example(
         ${libinternet}
       # EXECUTABLE_DIRECTORY_PATH ${scratch_directory}/
 )
+
+build_lib_example(
+    NAME irs-validation
+    SOURCE_FILES irs-validation.cc
+    LIBRARIES_TO_LINK
+        ${libirs}
+        ${libwifi}
+        ${libinternet}
+        ${libapplications}
+        ${libflow-monitor}
+      # EXECUTABLE_DIRECTORY_PATH ${scratch_directory}/
+)

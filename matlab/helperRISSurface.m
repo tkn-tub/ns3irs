@@ -55,7 +55,7 @@ classdef helperRISSurface < matlab.System
     methods (Access = protected)
         function setupImpl(obj)
             % Perform one-time calculations, such as computing constants
-            obj.cAntArray = phased.URA(obj.Size,obj.ElementSpacing,'Element',obj.ReflectorElement);
+            obj.cAntArray = phased.URA(obj.Size,obj.ElementSpacing,'Element',obj.ReflectorElement, 'ArrayNormal','x');
             obj.cTxArray = phased.Radiator('Sensor',obj.cAntArray,'OperatingFrequency',obj.OperatingFrequency);
             obj.cRxArray = phased.Collector('Sensor',obj.cAntArray,'OperatingFrequency',obj.OperatingFrequency);
         end
