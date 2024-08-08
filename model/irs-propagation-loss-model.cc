@@ -60,8 +60,8 @@ IrsPropagationLossModel::IrsPropagationLossModel()
     // set default values for m_lossModel if not set
     if (!m_lossModel)
     {
-        m_lossModel = ObjectFactory("ns3::LogDistancePropagationLossModel")
-                          .Create<LogDistancePropagationLossModel>();
+        m_lossModel =
+            ObjectFactory("ns3::FriisPropagationLossModel").Create<FriisPropagationLossModel>();
     }
 }
 
@@ -142,23 +142,29 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
     // complex envelope of recieved signal
     std::complex<double> r(0.0, 0.0);
 
-    // --------------------
-    // Ptr<Node> nodeA = a->GetObject<Node>();
-    // if (nodeA)
-    // {
-    //     Ptr<NetDevice> device = nodeA->GetDevice(0);
-    //     Ptr<WifiNetDevice> wifiNetDevice = DynamicCast<WifiNetDevice>(device);
-    //     Ptr<Channel> channel = wifiNetDevice->GetChannel();
-    //     Ptr<WifiPhy> wifiPhy = wifiNetDevice->GetPhy();
-    //     NS_LOG_DEBUG("Frequency: " << wifiPhy->GetFrequency());
-    //     NS_LOG_DEBUG("m_frequency: " << m_frequency);
-    // }
+#ifdef NS3_BUILD_PROFILE_DEBUG
+    // get current frequency - only possible when WifiNetDevice is used
+    Ptr<Node> nodeA = a->GetObject<Node>();
+    if (nodeA)
+    {
+        Ptr<NetDevice> device = nodeA->GetDevice(0);
+        Ptr<WifiNetDevice> wifiNetDevice = DynamicCast<WifiNetDevice>(device);
+        if (wifiNetDevice)
+        {
+            Ptr<Channel> channel = wifiNetDevice->GetChannel();
+            Ptr<WifiPhy> wifiPhy = wifiNetDevice->GetPhy();
+            if (wifiPhy)
+            {
+                NS_LOG_DEBUG("Frequency (MHz): " << wifiPhy->GetFrequency());
+            }
+        }
+    }
+#endif
 
-    // -------------------------
+    NS_LOG_DEBUG("--------- IRS Propagation Loss Model Debug Info ---------\n"
+                 << "m_frequency (Hz): " << m_frequency << "\n"
+                 << "TX Power (dBm): " << txPowerDbm);
 
-    // std::cout << "txPower: " << txPowerDbm << std::endl;
-    NS_LOG_INFO("--------------------------");
-    NS_LOG_DEBUG("TX Power: " << txPowerDbm);
     for (auto irsNode = m_irsNodes->Begin(); irsNode != m_irsNodes->End(); irsNode++)
     {
         Ptr<Node> node = *irsNode;
@@ -171,21 +177,21 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
                                     irs->GetObject<MobilityModel>()->GetPosition(),
                                     irs->GetObject<Irs>()->GetDirection());
 
-        NS_LOG_DEBUG("IRS Position (" << node->GetId()
-                                      << ") : " << node->GetObject<MobilityModel>()->GetPosition());
-        NS_LOG_DEBUG("TX Position: " << a->GetPosition());
-        NS_LOG_DEBUG("RX Position: " << b->GetPosition());
-        NS_LOG_DEBUG("IRS Direction: " << node->GetObject<Irs>()->GetDirection());
-        NS_LOG_DEBUG("Ingoing Angle: " << inAngle << " degrees");
-        NS_LOG_DEBUG("Outgoing Angle: " << outAngle << " degrees");
+        NS_LOG_DEBUG("" << "IRS Position (" << node->GetId()
+                        << "): " << node->GetObject<MobilityModel>()->GetPosition() << "\n"
+                        << "TX Position: " << a->GetPosition() << "\n"
+                        << "RX Position: " << b->GetPosition() << "\n"
+                        << "IRS Direction: " << node->GetObject<Irs>()->GetDirection() << "\n"
+                        << "Ingoing Angle (degrees): " << inAngle << "\n"
+                        << "Outgoing Angle (degrees): " << outAngle);
 
         // if the incoming angle is < 1 or > 179, then the IRS is not in the line of sight
         if (inAngle < 1 || inAngle > 179 || outAngle < 1 || outAngle > 179)
         {
-            NS_LOG_INFO("IRS (" << node->GetId() << ") with pos: "
-                                 << node->GetObject<MobilityModel>()->GetPosition()
-                                 << " not in LOS between " << a->GetPosition() << " and "
-                                 << b->GetPosition() << "");
+            NS_LOG_INFO("IRS (" << node->GetId() << ") with position: "
+                                << node->GetObject<MobilityModel>()->GetPosition()
+                                << " is not in LOS between " << a->GetPosition() << " and "
+                                << b->GetPosition());
             continue;
         }
         IrsEntry modifier =
@@ -194,67 +200,63 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
         // distance of irs path
         double d = a->GetDistanceFrom(node->GetObject<MobilityModel>()) +
                    node->GetObject<MobilityModel>()->GetDistanceFrom(b);
-        NS_LOG_DEBUG("Distance over IRS: " << d);
 
         // pathloss tx to irs
         double pl_irs = m_lossModel->CalcRxPower(txPowerDbm, a, node->GetObject<MobilityModel>());
-        NS_LOG_DEBUG("PL TX to IRX: " << pl_irs);
+        NS_LOG_DEBUG("PL TX to IRS (dBm): " << pl_irs);
         // gain of irs
         pl_irs += modifier.gain;
-        NS_LOG_DEBUG("PL with IRS gain: " << pl_irs);
+        NS_LOG_DEBUG("PL with IRS Gain (dBm): " << pl_irs);
         // pathloss irs to rx
         pl_irs = m_lossModel->CalcRxPower(pl_irs, node->GetObject<MobilityModel>(), b);
-        NS_LOG_DEBUG("PL IRS to RX: " << pl_irs);
-
-        // convert dBm to watts
-        pl_irs = DbmToW(pl_irs);
         // TODO: error model
 
         // calculate phase of irs path
-        double theta = (2 * M_PI * d) / m_lambda; // in radians
+        double theta = (2 * M_PI * d) / m_lambda;
         // add phase shift of irs to theta
         theta += modifier.phase_shift;
-
         // wrap to pi
         theta = WrapToPi(theta);
         // theta to complex
         std::complex<double> phase_irs(0.0, theta);
-        NS_LOG_DEBUG("Phase irs: " << phase_irs);
 
-        NS_LOG_INFO("IRS Gain: " << modifier.gain << " IRS Phase-Shift: " << modifier.phase_shift);
+        NS_LOG_INFO("IRS Gain (dBm): " << modifier.gain
+                                       << " | IRS phase shift (radians): " << modifier.phase_shift);
 
-        // add irs path to
-        r += std::sqrt(pl_irs) * std::exp(phase_irs);
-        NS_LOG_DEBUG(std::sqrt(pl_irs) * std::exp(phase_irs));
+        NS_LOG_DEBUG("" << "Distance over IRS (m): " << d << "\n"
+                        << "Phase IRS (radians): " << phase_irs << "\n"
+                        << "RX Power IRS (dBm): " << pl_irs);
+        // Add IRS path contribution
+        r += std::sqrt(DbmToW(pl_irs)) * std::exp(phase_irs);
     }
-    NS_LOG_DEBUG("RX Power only IRS: " << DbmFromW(std::pow(std::abs(r), 2)));
 
     Ptr<PropagationLossModel> next = GetNext();
     if (next)
     {
         // calculate amplitude
         double pl_other = next->CalcRxPower(txPowerDbm, a, b);
-        NS_LOG_DEBUG("PL LOS: " << pl_other);
-        pl_other = DbmToW(pl_other);
 
         // calculate phase
         double theta = (2 * M_PI * a->GetDistanceFrom(b)) / m_lambda;
         theta = WrapToPi(theta);
         std::complex<double> phase_other(0.0, theta);
 
-        NS_LOG_DEBUG("Phase LOS: " << phase_other);
-        NS_LOG_DEBUG("Distance LOS: " << a->GetDistanceFrom(b));
+        NS_LOG_DEBUG("" << "RX Power LOS (dBm): " << pl_other << "\n"
+                        << "Phase LOS (radians): " << phase_other << "\n"
+                        << "Distance LOS (m): " << a->GetDistanceFrom(b));
 
-        r += std::sqrt(pl_other) * std::exp(phase_other);
+        r += std::sqrt(DbmToW(pl_other)) * std::exp(phase_other);
     }
     else
     {
         NS_LOG_DEBUG("No N/LOS propagation model specified. Calculating only IRS path.");
     }
 
-    // recieved power
-    NS_LOG_INFO("Resulting RX Power: " << DbmFromW(std::pow(std::abs(r), 2)));
-    return DbmFromW(std::pow(std::abs(r), 2));
+    // Log resulting received power
+    double rxPower = DbmFromW(std::pow(std::abs(r), 2));
+    NS_LOG_DEBUG("Resulting RX Power (dBm): " << rxPower);
+
+    return rxPower;
 }
 
 double
