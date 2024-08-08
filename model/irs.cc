@@ -59,7 +59,13 @@ Irs::GetLookupTable() const
 void
 Irs::SetDirection(const Vector& direction)
 {
-    m_direction = direction;
+    // Normalize the vector
+    double m = direction.GetLength();
+    if (m != 0) {
+        m_direction = Vector3D(direction.x / m, direction.y / m, direction.z / m);
+    } else {
+        m_direction = direction;
+    }
 }
 
 Vector

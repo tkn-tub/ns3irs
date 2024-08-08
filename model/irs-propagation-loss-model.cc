@@ -106,10 +106,7 @@ IrsPropagationLossModel::CalcAngle(ns3::Vector A, ns3::Vector B, ns3::Vector N) 
     double dotProduct = AB.x * N.x + AB.y * N.y + AB.z * N.z;
     double normAB = std::sqrt(AB.x * AB.x + AB.y * AB.y + AB.z * AB.z);
 
-    // TODO: norm N at init so normN = 1
-    double normN = std::sqrt(N.x * N.x + N.y * N.y + N.z * N.z);
-
-    double cosTheta = dotProduct / (normAB * normN);
+    double cosTheta = dotProduct / (normAB);
     double theta = std::acos(cosTheta);
     double thetaDeg = theta * (180.0 / M_PI);
     return thetaDeg;
