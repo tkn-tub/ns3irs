@@ -44,7 +44,7 @@ function ris_table = generateIrsLookupTableConstructive(optimal_in_angle, optima
     % Calculate the reflected path phase
     reflected_path_phase = 2 * pi * (r_ap_ris + r_ue_ris) / lambda;
     % Calculate the required phase shift for constructive interference
-    required_phase_shift = reflected_path_phase - direct_path_phase;
+    required_phase_shift = (2 * pi) - (reflected_path_phase - direct_path_phase);
     % Calculate the optimal reflection coefficient
     rcoeff_ris_optimal = exp(1i * (required_phase_shift - angle(hr) - angle(g)));
     
