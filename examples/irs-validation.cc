@@ -2,7 +2,6 @@
 #include "ns3/command-line.h"
 #include "ns3/config.h"
 #include "ns3/double.h"
-#include "ns3/gnuplot.h"
 #include "ns3/internet-stack-helper.h"
 #include "ns3/ipv4-address-helper.h"
 #include "ns3/irs-helper.h"
@@ -59,7 +58,9 @@ class ScenarioStatistics
 ScenarioStatistics::ScenarioStatistics(std::string scenarioName)
     : m_scenarioName(scenarioName),
       m_bytesTotal(0),
-      m_throughput(0)
+      m_throughput(0),
+      m_dataRate(0),
+      m_snr(0)
 {
 }
 
@@ -72,7 +73,7 @@ ScenarioStatistics::RxCallback(std::string path, Ptr<const Packet> packet, const
 double
 ScenarioStatistics::GetThroughput()
 {
-    m_throughput = (m_bytesTotal * 8.0) / (1000000 * 10); // Mbps over 10 seconds
+    m_throughput = (m_bytesTotal * 8.0) / (1e6 * 10); // Mbps over 10 seconds
     return m_throughput;
 }
 
@@ -111,7 +112,6 @@ ScenarioStatistics::SNRCallback(std::string context,
                                 SignalNoiseDbm signalNoise,
                                 uint16_t staId)
 {
-    // std::cout << "SNR: " << signalNoise.signal - signalNoise.noise << std::endl;
     m_snr = (m_snr + signalNoise.signal - signalNoise.noise) / 2;
 }
 
@@ -152,13 +152,16 @@ RunScenario(Vector irsPosition,
                                        "Frequency",
                                        DoubleValue(5.21e9));
     }
-    wifiChannel.AddPropagationLoss("ns3::LogDistancePropagationLossModel");
+    if (scenario != "IRS")
+    {
+        wifiChannel.AddPropagationLoss("ns3::LogDistancePropagationLossModel");
+    }
 
     wifiPhy.SetChannel(wifiChannel.Create());
     wifiPhy.SetErrorRateModel("ns3::YansErrorRateModel");
 
     WifiHelper wifi;
-    wifi.SetStandard(WIFI_STANDARD_80211a);
+    wifi.SetStandard(WIFI_STANDARD_80211ac);
     wifi.SetRemoteStationManager(wifiManager);
 
     WifiMacHelper wifiMac;
@@ -201,7 +204,7 @@ RunScenario(Vector irsPosition,
     ApplicationContainer sinkApp = sink.Install(wifiStaNode.Get(0));
 
     OnOffHelper onoff("ns3::UdpSocketFactory", InetSocketAddress(interfaces.GetAddress(1), port));
-    onoff.SetConstantRate(DataRate("54Mbps"), 1500);
+    onoff.SetConstantRate(DataRate("400Mbps"), 1500);
     ApplicationContainer sourceApp = onoff.Install(wifiApNode.Get(0));
 
     sinkApp.Start(Seconds(0));
@@ -214,17 +217,16 @@ RunScenario(Vector irsPosition,
     Config::Connect("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/$" +
                         wifiManager + "/Rate",
                     MakeCallback(&ScenarioStatistics::RateCallback, &stats));
-
     Config::Connect(
         "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::WifiPhy/MonitorSnifferRx",
         MakeCallback(&ScenarioStatistics::SNRCallback, &stats));
 
     // Run simulation
-    Simulator::Stop(Seconds(5));
+    Simulator::Stop(Seconds(10));
     Simulator::Run();
 
-    std::cout << "Scenario: " << stats.GetScenarioName()
-              << ", Throughput: " << std::fixed << std::setprecision(2) <<  stats.GetThroughput() << " Mbps" << ", SNR: " << stats.GetSNR()
+    std::cout << std::fixed << std::setprecision(1) << "Scenario: " << stats.GetScenarioName()
+              << ", Throughput: " << stats.GetThroughput() << " Mbps" << ", SNR: " << stats.GetSNR()
               << " dB" << ", Data Rate: " << stats.GetDataRate() << " Mbps" << std::endl;
 
     Simulator::Destroy();
@@ -233,10 +235,10 @@ RunScenario(Vector irsPosition,
 int
 main(int argc, char* argv[])
 {
-    ns3::LogComponentEnable("IrsValidation", ns3::LOG_LEVEL_ALL);
+    // ns3::LogComponentEnable("IrsValidation", ns3::LOG_LEVEL_ALL);
     // ns3::LogComponentEnable("IrsPropagationLossModel", ns3::LOG_LEVEL_ALL);
 
-    std::string wifiManager = "ns3::MinstrelWifiManager";
+    std::string wifiManager = "ns3::MinstrelHtWifiManager";
 
     // Scenario 1: only LOS
     Vector irs(0, 0, 0);
@@ -246,12 +248,19 @@ main(int argc, char* argv[])
     Vector irs2(1.35, -1.35, 0);
     RunScenario(
         irs2,
+        "IRS",
+        wifiManager,
+        "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
+
+    // Scenario 3: IRS Constructive
+    RunScenario(
+        irs2,
         "IRS Constructive",
         wifiManager,
         "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
 
-    // Scenario 3: IRS Destructive
-    Vector irs3(20, -7.6, 0);
+    // Scenario 4: IRS Destructive
+    Vector irs3(20, -7.6141, 0);
     RunScenario(
         irs3,
         "IRS Destructive",
