@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2024 Jakob Rühlow
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Author: Jakob Rühlow <j.ruehlow@campus.tu-berlin.de>
+ */
+
 #include "irs-helper.h"
 
 #include "ns3/names.h"
@@ -28,19 +47,17 @@ IrsHelper::Install(Ptr<Node> node) const
     if (!irs)
     {
         irs = m_irs.Create()->GetObject<Irs>();
-        if (!irs)
-        {
-            NS_FATAL_ERROR("The requested irs model is not a irs model: \""
-                           << m_irs.GetTypeId().GetName() << "\"");
-        }
+        NS_ABORT_MSG_IF(!irs,
+                        "The requested irs model is not a irs model: \""
+                            << m_irs.GetTypeId().GetName() << "\"");
         NS_LOG_DEBUG("node=" << object << ", irs=" << irs);
         object->AggregateObject(irs);
     }
-    if (!m_irsLookupTable)
-    {
-        NS_FATAL_ERROR(
-            "No Lookup Table for IRS set. Please set a Lookup Table before installing the IRS.");
-    }
+
+    NS_ABORT_MSG_IF(
+        !m_irsLookupTable,
+        "No Lookup Table for IRS set. Please set a Lookup Table before installing the IRS.");
+
     irs->SetLookupTable(m_irsLookupTable);
     irs->SetDirection(m_direction);
 }
@@ -72,10 +89,7 @@ IrsHelper::SetLookupTable(std::string filename)
 {
     // Load Lookup Table from csv file
     std::ifstream file(filename);
-    if (!file.is_open())
-    {
-        NS_FATAL_ERROR("IRS Lookup Table file not found.");
-    }
+    NS_ABORT_MSG_IF(!file.is_open(), "IRS Lookup Table file not found.");
 
     // Create the lookup table
     m_irsLookupTable = CreateObject<IrsLookupTable>();
@@ -118,6 +132,7 @@ IrsHelper::SetLookupTable(Ptr<IrsLookupTable> table)
 void
 IrsHelper::SetDirection(Vector direction)
 {
+
     m_direction = direction;
 }
 } // namespace ns3

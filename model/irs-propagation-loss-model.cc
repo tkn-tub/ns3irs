@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2024 Jakob Rühlow
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Author: Jakob Rühlow <j.ruehlow@campus.tu-berlin.de>
+ */
+
 #include "irs-propagation-loss-model.h"
 
 #include "irs.h"
@@ -46,8 +65,8 @@ IrsPropagationLossModel::GetTypeId()
                           MakePointerChecker<PropagationLossModel>())
             .AddAttribute(
                 "Frequency",
-                "The carrier frequency (in Hz) at which propagation occurs (default is 2.412 GHz).",
-                DoubleValue(2.412e9),
+                "The carrier frequency (in Hz) at which propagation occurs (default is 5.21 GHz).",
+                DoubleValue(5.21e9),
                 MakeDoubleAccessor(&IrsPropagationLossModel::SetFrequency,
                                    &IrsPropagationLossModel::GetFrequency),
                 MakeDoubleChecker<double>());
@@ -57,12 +76,6 @@ IrsPropagationLossModel::GetTypeId()
 IrsPropagationLossModel::IrsPropagationLossModel()
     : PropagationLossModel()
 {
-    // set default values for m_lossModel if not set
-    if (!m_lossModel)
-    {
-        m_lossModel =
-            ObjectFactory("ns3::FriisPropagationLossModel").Create<FriisPropagationLossModel>();
-    }
 }
 
 IrsPropagationLossModel::~IrsPropagationLossModel()
@@ -72,6 +85,7 @@ IrsPropagationLossModel::~IrsPropagationLossModel()
 void
 IrsPropagationLossModel::SetFrequency(double frequency)
 {
+    NS_ABORT_MSG_UNLESS(frequency > 0, "Frequency should be greater zero (in Hz).");
     m_frequency = frequency;
     static const double c = 299792458.0; // speed of light in vacuum
     m_lambda = c / frequency;
@@ -81,6 +95,31 @@ double
 IrsPropagationLossModel::GetFrequency() const
 {
     return m_frequency;
+}
+
+void
+IrsPropagationLossModel::SetIrsNodes(Ptr<NodeContainer> nodes)
+{
+    NS_ABORT_MSG_UNLESS(nodes->GetN() > 0, "The IRS NodeContainer must contain at least one node.");
+    m_irsNodes = nodes;
+}
+
+Ptr<NodeContainer>
+IrsPropagationLossModel::GetIrsNodes() const
+{
+    return m_irsNodes;
+}
+
+void
+IrsPropagationLossModel::SetPropagationModel(Ptr<PropagationLossModel> model)
+{
+    m_lossModel = model;
+}
+
+Ptr<PropagationLossModel>
+IrsPropagationLossModel::GetPropagatioModel() const
+{
+    return m_lossModel;
 }
 
 // copied from FriisPropagationLossModel
