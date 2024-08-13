@@ -355,7 +355,7 @@ main(int argc, char* argv[])
                     wifiManager,
                     runNumber,
                     irs,
-                    "contrib/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
+                    "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
     }
     else if (scenario == "IrsConstructive")
     {
@@ -365,7 +365,7 @@ main(int argc, char* argv[])
                     wifiManager,
                     runNumber,
                     irs,
-                    "contrib/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
+                    "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
     }
     else if (scenario == "IrsDestructive")
     {
@@ -375,7 +375,7 @@ main(int argc, char* argv[])
                     wifiManager,
                     runNumber,
                     irs,
-                    "contrib/examples/lookuptables/IRS_400_IN160_OUT21_FREQ5.21GHz_destructive.csv");
+                    "contrib/irs/examples/lookuptables/IRS_400_IN160_OUT21_FREQ5.21GHz_destructive.csv");
     }
     return 0;
 }
