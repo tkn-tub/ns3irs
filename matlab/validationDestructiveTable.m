@@ -5,7 +5,7 @@ freq = 5.21e9;
 
 ap = [0;0;0];
 ue = [40;0;0];
-ris = [20;-7.6141;0];
+ris = [20.5186; -7.6093;0];
 [r_ap_ris,a_ap_ris] = rangeangle(ap,ris)
 [r_ris_ue,a_ris_ue] = rangeangle(ue, ris)
 

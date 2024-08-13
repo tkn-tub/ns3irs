@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2024 Jakob Rühlow
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Author: Jakob Rühlow <j.ruehlow@campus.tu-berlin.de>
+ */
+
 #include "ns3/boolean.h"
 #include "ns3/command-line.h"
 #include "ns3/config.h"
@@ -15,15 +34,19 @@
 #include "ns3/pointer.h"
 #include "ns3/propagation-delay-model.h"
 #include "ns3/propagation-loss-model.h"
+#include "ns3/rng-seed-manager.h"
 #include "ns3/ssid.h"
 #include "ns3/string.h"
 #include "ns3/uinteger.h"
 #include "ns3/yans-wifi-channel.h"
 #include "ns3/yans-wifi-helper.h"
 
+#include <cstdint>
 #include <iomanip>
+#include <iostream>
 #include <ostream>
 #include <string>
+#include <sys/types.h>
 
 using namespace ns3;
 
@@ -38,6 +61,9 @@ class ScenarioStatistics
     std::string GetScenarioName();
     double GetDataRate() const;
     double GetSNR() const;
+    double GetSuccessRate() const;
+    uint32_t GetTotalRxPackets() const;
+    uint32_t GetTotalTxPackets() const;
     void RateCallback(std::string path, uint64_t oldRate, uint64_t newRate);
     void SNRCallback(std::string context,
                      Ptr<const Packet> p,
@@ -46,13 +72,21 @@ class ScenarioStatistics
                      MpduInfo aMpdu,
                      SignalNoiseDbm signalNoise,
                      uint16_t staId);
+    void TxCallback(std::string context,
+                    const Ptr<const Packet> packet,
+                    uint16_t channelFreqMhz,
+                    WifiTxVector txVector,
+                    MpduInfo aMpdu,
+                    uint16_t staId);
 
   private:
     std::string m_scenarioName;
-    uint32_t m_bytesTotal;
+    uint64_t m_bytesTotal;
     double m_throughput;
     double m_dataRate;
-    double m_snr;
+    uint32_t m_rxpackets;
+    uint32_t m_txpackets;
+    uint64_t m_snrSum;
 };
 
 ScenarioStatistics::ScenarioStatistics(std::string scenarioName)
@@ -60,7 +94,9 @@ ScenarioStatistics::ScenarioStatistics(std::string scenarioName)
       m_bytesTotal(0),
       m_throughput(0),
       m_dataRate(0),
-      m_snr(0)
+      m_rxpackets(0),
+      m_txpackets(0),
+      m_snrSum(0)
 {
 }
 
@@ -90,9 +126,27 @@ ScenarioStatistics::GetDataRate() const
 }
 
 double
+ScenarioStatistics::GetSuccessRate() const
+{
+    return (m_txpackets == 0) ? 0.0 : ((double)m_rxpackets / (double)m_txpackets) * 100.0;
+}
+
+uint32_t
+ScenarioStatistics::GetTotalRxPackets() const
+{
+    return m_rxpackets;
+}
+
+uint32_t
+ScenarioStatistics::GetTotalTxPackets() const
+{
+    return m_txpackets;
+}
+
+double
 ScenarioStatistics::GetSNR() const
 {
-    return m_snr;
+    return (m_rxpackets == 0) ? 0.0 : m_snrSum / m_rxpackets;
 }
 
 void
@@ -112,15 +166,31 @@ ScenarioStatistics::SNRCallback(std::string context,
                                 SignalNoiseDbm signalNoise,
                                 uint16_t staId)
 {
-    m_snr = (m_snr + signalNoise.signal - signalNoise.noise) / 2;
+    m_snrSum += signalNoise.signal - signalNoise.noise;
+    m_rxpackets++;
 }
 
 void
-RunScenario(Vector irsPosition,
-            std::string scenario,
-            std::string wifiManager,
-            std::string lookuptable)
+ScenarioStatistics::TxCallback(std::string context,
+                               const Ptr<const Packet> packet,
+                               uint16_t channelFreqMhz,
+                               WifiTxVector txVector,
+                               MpduInfo aMpdu,
+                               uint16_t staId)
 {
+    m_txpackets++;
+}
+
+void
+RunScenario(std::string scenario,
+            std::string wifiManager,
+            uint16_t runNumber = 1,
+            Vector irsPosition = Vector(0, 0, 0),
+            std::string lookuptable = "")
+{
+    RngSeedManager::SetSeed(2024);
+    RngSeedManager::SetRun(runNumber);
+
     // Create nodes
     NodeContainer wifiApNode;
     NodeContainer wifiStaNode;
@@ -159,6 +229,7 @@ RunScenario(Vector irsPosition,
 
     wifiPhy.SetChannel(wifiChannel.Create());
     wifiPhy.SetErrorRateModel("ns3::YansErrorRateModel");
+    wifiPhy.SetInterferenceHelper("ns3::InterferenceHelper");
 
     WifiHelper wifi;
     wifi.SetStandard(WIFI_STANDARD_80211ac);
@@ -204,7 +275,7 @@ RunScenario(Vector irsPosition,
     ApplicationContainer sinkApp = sink.Install(wifiStaNode.Get(0));
 
     OnOffHelper onoff("ns3::UdpSocketFactory", InetSocketAddress(interfaces.GetAddress(1), port));
-    onoff.SetConstantRate(DataRate("400Mbps"), 1500);
+    onoff.SetConstantRate(DataRate("400Mbps"), 1200);
     ApplicationContainer sourceApp = onoff.Install(wifiApNode.Get(0));
 
     sinkApp.Start(Seconds(0));
@@ -212,22 +283,32 @@ RunScenario(Vector irsPosition,
 
     // Statistics
     ScenarioStatistics stats(scenario);
+    // STA: total recieved bytes
     Config::Connect("/NodeList/1/ApplicationList/*/$ns3::PacketSink/Rx",
                     MakeCallback(&ScenarioStatistics::RxCallback, &stats));
-    Config::Connect("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/$" +
+    // STA: mean SNR + count recieved packages at phy level
+    Config::Connect(
+        "/NodeList/1/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::WifiPhy/MonitorSnifferRx",
+        MakeCallback(&ScenarioStatistics::SNRCallback, &stats));
+    // AP: DataRate
+    Config::Connect("/NodeList/0/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/$" +
                         wifiManager + "/Rate",
                     MakeCallback(&ScenarioStatistics::RateCallback, &stats));
+    // AP: count sent packages at phy level
     Config::Connect(
-        "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::WifiPhy/MonitorSnifferRx",
-        MakeCallback(&ScenarioStatistics::SNRCallback, &stats));
+        "/NodeList/0/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::WifiPhy/MonitorSnifferTx",
+        MakeCallback(&ScenarioStatistics::TxCallback, &stats));
 
     // Run simulation
     Simulator::Stop(Seconds(10));
     Simulator::Run();
 
-    std::cout << std::fixed << std::setprecision(1) << "Scenario: " << stats.GetScenarioName()
+    std::cout << std::fixed << std::setprecision(2) << "Scenario: " << stats.GetScenarioName()
               << ", Throughput: " << stats.GetThroughput() << " Mbps" << ", SNR: " << stats.GetSNR()
-              << " dB" << ", Data Rate: " << stats.GetDataRate() << " Mbps" << std::endl;
+              << " dBm" << ", Data Rate: " << stats.GetDataRate() << " Mbps"
+              << ", Success Rate:" << stats.GetSuccessRate()
+              << "%, Transmitted Packets:" << stats.GetTotalTxPackets()
+              << ", Recieved Packets:" << stats.GetTotalRxPackets() << std::endl;
 
     Simulator::Destroy();
 }
@@ -235,37 +316,66 @@ RunScenario(Vector irsPosition,
 int
 main(int argc, char* argv[])
 {
-    // ns3::LogComponentEnable("IrsValidation", ns3::LOG_LEVEL_ALL);
-    // ns3::LogComponentEnable("IrsPropagationLossModel", ns3::LOG_LEVEL_ALL);
-
+    std::string scenario = "LOS";
     std::string wifiManager = "ns3::MinstrelHtWifiManager";
+    bool verbose = false;
+    bool debug = false;
+    uint16_t runNumber = 1;
 
-    // Scenario 1: only LOS
-    Vector irs(0, 0, 0);
-    RunScenario(irs, "LOS", wifiManager, "");
+    CommandLine cmd(__FILE__);
+    cmd.AddValue("scenario",
+                 "Scenario to run: LOS, IRS, IrsConstructive, IrsDestructive",
+                 scenario);
+    cmd.AddValue("wifiManager", "wifi manager", wifiManager);
+    cmd.AddValue("debug", "IRS Debug Info", debug);
+    cmd.AddValue("verbose", "Verbose Data Rate Logging", verbose);
+    cmd.AddValue("run", "run number for different randomness seed", runNumber);
 
-    // Scenario 2: IRS Constructive
-    Vector irs2(1.35, -1.35, 0);
-    RunScenario(
-        irs2,
-        "IRS",
-        wifiManager,
-        "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
+    cmd.Parse(argc, argv);
 
-    // Scenario 3: IRS Constructive
-    RunScenario(
-        irs2,
-        "IRS Constructive",
-        wifiManager,
-        "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
+    if (debug)
+    {
+        ns3::LogComponentEnable("IrsPropagationLossModel", ns3::LOG_LEVEL_ALL);
+    }
+    if (verbose)
+    {
+        ns3::LogComponentEnable("IrsValidation", ns3::LOG_LEVEL_ALL);
+    }
 
-    // Scenario 4: IRS Destructive
-    Vector irs3(20, -7.6141, 0);
-    RunScenario(
-        irs3,
-        "IRS Destructive",
-        wifiManager,
-        "contrib/irs/examples/lookuptables/IRS_400_IN159_OUT21_FREQ5.21GHz_destructive.csv");
-
+    if (scenario == "LOS")
+    {
+        // Scenario 1: only LOS
+        RunScenario("LOS", wifiManager, runNumber);
+    }
+    else if (scenario == "IRS")
+    {
+        // Scenario 2: IRS Constructive
+        Vector irs(1.35, -1.35, 0);
+        RunScenario("IRS",
+                    wifiManager,
+                    runNumber,
+                    irs,
+                    "contrib/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
+    }
+    else if (scenario == "IrsConstructive")
+    {
+        // Scenario 3: IRS Constructive
+        Vector irs(1.35, -1.35, 0);
+        RunScenario("IRS Constructive",
+                    wifiManager,
+                    runNumber,
+                    irs,
+                    "contrib/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
+    }
+    else if (scenario == "IrsDestructive")
+    {
+        // // Scenario 4: IRS Destructive
+        Vector irs(20.5186, -7.6093, 0);
+        RunScenario("IRS Destructive",
+                    wifiManager,
+                    runNumber,
+                    irs,
+                    "contrib/examples/lookuptables/IRS_400_IN160_OUT21_FREQ5.21GHz_destructive.csv");
+    }
     return 0;
 }
