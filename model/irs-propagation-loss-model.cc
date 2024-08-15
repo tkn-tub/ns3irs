@@ -32,11 +32,13 @@
 #include "ns3/wifi-net-device.h"
 #include "ns3/wifi-phy.h"
 
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <cstdint>
 #include <iostream>
 #include <ostream>
+#include <utility>
 
 namespace ns3
 {
@@ -138,17 +140,45 @@ IrsPropagationLossModel::DbmFromW(double w) const
     return dbm;
 }
 
-double
-IrsPropagationLossModel::CalcAngle(ns3::Vector A, ns3::Vector B, ns3::Vector N) const
+std::pair<double, double>
+IrsPropagationLossModel::CalcAngles(ns3::Vector A,
+                                    ns3::Vector B,
+                                    ns3::Vector I,
+                                    ns3::Vector N) const
 {
-    Vector AB = A - B;
-    double dotProduct = AB.x * N.x + AB.y * N.y + AB.z * N.z;
-    double normAB = std::sqrt(AB.x * AB.x + AB.y * AB.y + AB.z * AB.z);
+    // Vector from IRS to A and B
+    ns3::Vector IA = A - I;
+    ns3::Vector IB = B - I;
 
-    double cosTheta = dotProduct / (normAB);
-    double theta = std::acos(cosTheta);
-    double thetaDeg = theta * (180.0 / M_PI);
-    return thetaDeg;
+    double IAnorm = IA.GetLength();
+    double IBnorm = IB.GetLength();
+
+    // avoid division by zero
+    if (IAnorm == 0 || IBnorm == 0)
+    {
+        return std::make_pair(-1, -1);
+    }
+
+    // Calculate the angle of incidence
+    double cosThetaInc = (IA * N) / IA.GetLength();
+    double thetaInc = std::acos(std::clamp(cosThetaInc, -1.0, 1.0));
+    double thetaIncDeg = thetaInc * (180.0 / M_PI);
+
+    // Calculate the angle of reflection
+    double cosThetaRef = (IB * N) / IB.GetLength();
+    double thetaRef = std::acos(std::clamp(cosThetaRef, -1.0, 1.0));
+    double thetaRefDeg = thetaRef * (180.0 / M_PI);
+
+    // check if A and B are on opposite sites
+    double C = N.x * (A.x - I.x) + N.y * (A.y - I.y) + N.z * (A.z - I.z);
+    double D = N.x * (B.x - I.x) + N.y * (B.y - I.y) + N.z * (B.z - I.z);
+    if (std::abs(C * D) < 1e-6)
+    {
+        return std::make_pair(-1, -1);
+    }
+
+    // Return both angles as a pair
+    return std::make_pair(thetaIncDeg, thetaRefDeg);
 }
 
 double
@@ -206,23 +236,23 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
         Ptr<Node> node = *irsNode;
         Ptr<Irs> irs = node->GetObject<Irs>();
 
-        double inAngle = CalcAngle(a->GetPosition(),
-                                   irs->GetObject<MobilityModel>()->GetPosition(),
-                                   irs->GetObject<Irs>()->GetDirection());
-        double outAngle = CalcAngle(b->GetPosition(),
-                                    irs->GetObject<MobilityModel>()->GetPosition(),
-                                    irs->GetObject<Irs>()->GetDirection());
+        std::pair<double, double> angles =
+            CalcAngles(a->GetPosition(),
+                       b->GetPosition(),
+                       irs->GetObject<MobilityModel>()->GetPosition(),
+                       irs->GetObject<Irs>()->GetDirection());
 
         NS_LOG_DEBUG("" << "IRS Position (" << node->GetId()
                         << "): " << node->GetObject<MobilityModel>()->GetPosition() << "\n"
                         << "TX Position: " << a->GetPosition() << "\n"
                         << "RX Position: " << b->GetPosition() << "\n"
                         << "IRS Direction: " << node->GetObject<Irs>()->GetDirection() << "\n"
-                        << "Ingoing Angle (degrees): " << inAngle << "\n"
-                        << "Outgoing Angle (degrees): " << outAngle);
+                        << "Ingoing Angle (degrees): " << angles.first << "\n"
+                        << "Outgoing Angle (degrees): " << angles.first);
 
         // if the incoming angle is < 1 or > 179, then the IRS is not in the line of sight
-        if (inAngle < 1 || inAngle > 179 || outAngle < 1 || outAngle > 179)
+        // if Nodes are on opposite sides angles are (-1, -1)
+        if (angles.first < 1 || angles.first > 179 || angles.second < 1 || angles.second > 179)
         {
             NS_LOG_INFO("IRS (" << node->GetId() << ") with position: "
                                 << node->GetObject<MobilityModel>()->GetPosition()
@@ -231,7 +261,7 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
             continue;
         }
         IrsEntry modifier =
-            irs->GetLookupTable()->GetIrsEntry(std::round(inAngle), std::round(outAngle));
+            irs->GetLookupTable()->GetIrsEntry(std::round(angles.first), std::round(angles.second));
 
         // distance of irs path
         double d = a->GetDistanceFrom(node->GetObject<MobilityModel>()) +
