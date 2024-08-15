@@ -26,6 +26,8 @@
 #include "ns3/propagation-loss-model.h"
 #include "ns3/vector.h"
 
+class IrsPropagationLossModelHelperFunctionsTestCase;
+
 namespace ns3
 {
 
@@ -48,21 +50,98 @@ class IrsPropagationLossModel : public PropagationLossModel
     double CalcRxPower(double txPowerDbm,
                        Ptr<MobilityModel> a,
                        Ptr<MobilityModel> b) const override;
-
+    /**
+     * \param frequency (Hz)
+     *
+     * Set the carrier frequency used in the irs model
+     * calculation.
+     */
     void SetFrequency(double frequency);
+
+    /**
+     * \return the current frequency (Hz)
+     */
     double GetFrequency() const;
 
+    /**
+     * \param IRS nodes in the channel
+     *
+     * Set the IRS nodes in the channel. Nodes should contain irs model
+     */
     void SetIrsNodes(Ptr<NodeContainer> nodes);
+
+    /**
+     * \return the irs nodes
+     */
     Ptr<NodeContainer> GetIrsNodes() const;
 
+    /**
+     * Set the PropagationLossModel for the paths Tx -> IRS and IRS -> Rx
+     *
+     * \param model PropagationLossModel
+     */
     void SetPropagationModel(Ptr<PropagationLossModel> model);
+
+    /**
+     * \return the propagation model
+     */
     Ptr<PropagationLossModel> GetPropagatioModel() const;
 
   private:
+    /**
+     * Transforms a Dbm value to Watt
+     * \param w the Dbm value
+     * \return the Watt
+     */
     double DbmToW(double dbm) const;
+
+    /**
+     * Transforms a Watt value to Dbm
+     * \param w the Watt value
+     * \return the Dbm
+     */
     double DbmFromW(double w) const;
 
-    double CalcAngle(ns3::Vector a, ns3::Vector b, ns3::Vector n) const;
+    /**
+     * Calculates the angle in degrees between the vector from point B to point A
+     * (`AB`) and the IRS normal vector (`N`). Also determines whether points A and B are on
+     * opposite sides of the IRS, given the position of the IRS.
+     *
+     * \param A Position of A.
+     * \param B Position of B.
+     * \param N Normal vector of the IRS.
+     * \param IrsPos Position of the IRS.
+     *
+     * \return The angles in degrees between the vector AB and the IRS normal vector.
+     * If A and B are on opposite sides of the IRS it returns {-1, -1}.
+     */
+
+    /**
+     * Computes the angle of incidence and the angle of reflection for the vectors
+     * from IRS to A and B, with respect to the direction of the IRS. If points A and B
+     * are located on opposite sides of the IRS, the function returns (-1, -1) to indicate this
+     * situation.
+     *
+     * @param A position of A
+     * @param B Position of B
+     * @param I Position of IRS
+     * @param N Normal vector of the IRS
+     *
+     * @return A std::pair containing:
+     *         - The angle of incidence in degrees (0 to 180 degrees).
+     *         - The angle of reflection in degrees (0 to 180 degrees).
+     *         If points A and B are on opposite sides of the IRS, both angles will be set to -1.
+     */
+    std::pair<double, double> CalcAngles(ns3::Vector A,
+                                         ns3::Vector B,
+                                         ns3::Vector I,
+                                         ns3::Vector N) const;
+
+    /**
+     * Wraps angle to the range -pi to pi
+     * \param angle angle in radians
+     * \return angle in radians (range -pi to pi)
+     */
     double WrapToPi(double angle) const;
 
     double DoCalcRxPower(double txPowerDbm,
@@ -75,6 +154,8 @@ class IrsPropagationLossModel : public PropagationLossModel
     Ptr<PropagationLossModel> m_lossModel;
     double m_frequency;
     double m_lambda;
+
+    friend class ::IrsPropagationLossModelHelperFunctionsTestCase;
 };
 
 } // namespace ns3
