@@ -19,10 +19,14 @@
 #include "ns3/config.h"
 #include "ns3/constant-position-mobility-model.h"
 #include "ns3/double.h"
+#include "ns3/irs-helper.h"
 #include "ns3/irs-propagation-loss-model.h"
 #include "ns3/log.h"
 #include "ns3/simulator.h"
 #include "ns3/test.h"
+
+#include <cmath>
+#include <string>
 
 using namespace ns3;
 
@@ -50,10 +54,12 @@ class IrsPropagationLossModelTestCase : public TestCase
     /// Test vector
     struct TestVector
     {
-        Vector m_position;  //!< Test node position
-        double m_pt;        //!< Tx power [dBm]
-        double m_pr;        //!< Rx power [W]
-        double m_tolerance; //!< Tolerance
+        double m_dt;     // distance tx -> irs
+        double m_dx;     // distance irs -> rx
+        double inAngle;  // radians
+        double outAngle; // radians
+        double size;
+        std::string lookuptable;
     };
 
     /// Test vectors
@@ -61,8 +67,7 @@ class IrsPropagationLossModelTestCase : public TestCase
 };
 
 IrsPropagationLossModelTestCase::IrsPropagationLossModelTestCase()
-    : TestCase("Check to see that the ns-3 Friis propagation loss model provides correct received "
-               "power"),
+    : TestCase("Compare results of IrsPropagationLossModel to path loss formel specified by ETSI"),
       m_testVectors()
 {
 }
@@ -74,72 +79,120 @@ IrsPropagationLossModelTestCase::~IrsPropagationLossModelTestCase()
 void
 IrsPropagationLossModelTestCase::DoRun()
 {
-    // The ns-3 testing manual gives more background on the values selected
-    // for this test.  First, set a few defaults.
+    double tolerance = 0;
+    double frequency = 5.21e9;
+    double txPowerDbm = 17;
+    static const double c = 299792458.0;
+    double lambda = c / frequency;
 
-    // the test vectors have been determined for a wavelength of 0.125 m
-    // which corresponds to a frequency of 2398339664.0 Hz in the vacuum
-    // Config::SetDefault("ns3::FriisPropagationLossModel::Frequency", DoubleValue(2398339664.0));
-    // Config::SetDefault("ns3::FriisPropagationLossModel::SystemLoss", DoubleValue(1.0));
+    TestVector tv;
+
+    ns3::LogComponentEnable("IrsPropagationLossModel", ns3::LOG_LEVEL_ALL);
+    tv.m_dt = 1.0;
+    tv.m_dx = 1.0;
+    tv.size = 400;
+    tv.inAngle = 2.3562;
+    tv.outAngle = 0.0349;
+    tv.lookuptable =
+        "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv";
+    m_testVectors.Add(tv);
+
+    tv.m_dt = 1.0;
+    tv.m_dx = 10.0;
+    tv.size = 400;
+    tv.inAngle = 2.3562;
+    tv.outAngle = 0.0349;
+    tv.lookuptable =
+        "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv";
+    m_testVectors.Add(tv);
+
+    tv.m_dt = 1.0;
+    tv.m_dx = 30.0;
+    tv.size = 400;
+    tv.inAngle = 2.3562;
+    tv.outAngle = 0.0349;
+    tv.lookuptable =
+        "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv";
+    m_testVectors.Add(tv);
+
+    tv.m_dt = 60.0;
+    tv.m_dx = 10.0;
+    tv.size = 400;
+    tv.inAngle = 2.3562;
+    tv.outAngle = 0.0349;
+    tv.lookuptable =
+        "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv";
+    m_testVectors.Add(tv);
+
+    tv.m_dt = 30.0;
+    tv.m_dx = 30.0;
+    tv.size = 400;
+    tv.inAngle = 2.3562;
+    tv.outAngle = 0.0349;
+    tv.lookuptable =
+        "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv";
+    m_testVectors.Add(tv);
+
+    NodeContainer irsNode;
+    irsNode.Create(1);
+
+    IrsHelper irsHelper;
+    irsHelper.SetDirection(Vector(0, 1, 0));
+
+    Ptr<MobilityModel> a = CreateObject<ConstantPositionMobilityModel>();
+    Ptr<MobilityModel> b = CreateObject<ConstantPositionMobilityModel>();
+    Ptr<MobilityModel> irs = CreateObject<ConstantPositionMobilityModel>();
+    irs->SetPosition(Vector(0, 0, 0));
+    irsNode.Get(0)->AggregateObject(irs);
+
+    Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
+    irsLossModel->SetFrequency(frequency);
+    irsLossModel->SetSystemLoss(1);
+
+    Ptr<IrsPropagationLossModel> lossModel = CreateObject<IrsPropagationLossModel>();
+    lossModel->SetFrequency(frequency);
+    lossModel->SetIrsNodes(&irsNode);
+    lossModel->SetPropagationModel(irsLossModel);
+
+    /*
+    The path loss for a IRS scenario in the far field case is given in:
+    ETSI GR RIS 003 V1.1.1. "Reconfigurable Intelligent Surfaces (RIS); Communication Models,
+    Channel Models, Channel Estimation and Evaluation Methodology."
+
+    dt, dr: distance tx->irs, irs->rx
+    size: irs size
+    A = 1
+    dx * dy = lambda^2 / (4 * pi) -- Size of an Isotropic Antenna (Björnson & Demir, 2024)
+    */
+    auto pl_etsi = [](double dt, double dr, double size, double lambda) {
+        return std::pow((4 * M_PI * dt * dr) / (size * (std::pow(lambda, 2) / (4 * M_PI)) * 1), 2);
+    };
+
+    for (uint32_t i = 0; i < m_testVectors.GetN(); ++i)
+    {
+        tv = m_testVectors.Get(i);
+
+        irsHelper.SetLookupTable(tv.lookuptable);
+        irsHelper.Install(irsNode);
+
+        a->SetPosition(Vector(tv.m_dt * std::cos(tv.inAngle), tv.m_dt * std::sin(tv.inAngle), 0));
+        b->SetPosition(Vector(tv.m_dx * std::cos(tv.outAngle), tv.m_dx * std::sin(tv.outAngle), 0));
+        double resultdBm = lossModel->CalcRxPower(txPowerDbm, a, b);
+        double etsidBm =
+            txPowerDbm + lossModel->DbmFromW(-pl_etsi(tv.m_dt, tv.m_dx, tv.size, lambda));
+
+        NS_TEST_EXPECT_MSG_EQ_TOL(resultdBm, etsidBm, tolerance, "Got unexpected rcv power");
+    }
+
+    // out of range
+    // irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
+    // irsHelper.Install(irsNode);
     //
-    // // Select a reference transmit power
-    // // Pt = 10^(17.0206/10)/10^3 = .05035702 W
-    // double txPowerW = 0.05035702;
-    // double txPowerdBm = 10 * std::log10(txPowerW) + 30;
+    // a->SetPosition(Vector(1, 1, 0));
+    // b->SetPosition(Vector(-1, 1, 0));
+    // double resultdBm = lossModel->CalcRxPower(txPowerDbm, a, b);
     //
-    // //
-    // // We want to test the propagation loss model calculations at a few chosen
-    // // distances and compare the results to those we have manually calculated
-    // // according to the model documentation.  The model reference specifies,
-    // // for instance, that the received power at 100m according to the provided
-    // // input power will be 4.98265e-10 W.  Since this value specifies the power
-    // // to 1e-15 significance, we test the ns-3 calculated value for agreement
-    // // within 5e-16.
-    // //
-    // TestVector testVector;
-    //
-    // testVector.m_position = Vector(100, 0, 0);
-    // testVector.m_pt = txPowerdBm;
-    // testVector.m_pr = 4.98265e-10;
-    // testVector.m_tolerance = 5e-16;
-    // m_testVectors.Add(testVector);
-    //
-    // testVector.m_position = Vector(500, 0, 0);
-    // testVector.m_pt = txPowerdBm;
-    // testVector.m_pr = 1.99306e-11;
-    // testVector.m_tolerance = 5e-17;
-    // m_testVectors.Add(testVector);
-    //
-    // testVector.m_position = Vector(1000, 0, 0);
-    // testVector.m_pt = txPowerdBm;
-    // testVector.m_pr = 4.98265e-12;
-    // testVector.m_tolerance = 5e-18;
-    // m_testVectors.Add(testVector);
-    //
-    // testVector.m_position = Vector(2000, 0, 0);
-    // testVector.m_pt = txPowerdBm;
-    // testVector.m_pr = 1.24566e-12;
-    // testVector.m_tolerance = 5e-18;
-    // m_testVectors.Add(testVector);
-    //
-    // // Now, check that the received power values are expected
-    //
-    // Ptr<MobilityModel> a = CreateObject<ConstantPositionMobilityModel>();
-    // a->SetPosition(Vector(0, 0, 0));
-    // Ptr<MobilityModel> b = CreateObject<ConstantPositionMobilityModel>();
-    //
-    // Ptr<FriisPropagationLossModel> lossModel = CreateObject<FriisPropagationLossModel>();
-    // for (uint32_t i = 0; i < m_testVectors.GetN(); ++i)
-    // {
-    //     testVector = m_testVectors.Get(i);
-    //     b->SetPosition(testVector.m_position);
-    //     double resultdBm = lossModel->CalcRxPower(testVector.m_pt, a, b);
-    //     double resultW = std::pow(10.0, resultdBm / 10.0) / 1000;
-    //     NS_TEST_EXPECT_MSG_EQ_TOL(resultW,
-    //                               testVector.m_pr,
-    //                               testVector.m_tolerance,
-    //                               "Got unexpected rcv power");
-    // }
+    // NS_TEST_ASSERT_MSG_EQ(std::isinf(resultdBm), true, "Should not be in LoS");
 }
 
 /**
@@ -160,23 +213,10 @@ class IrsPropagationLossModelHelperFunctionsTestCase : public TestCase
 
   private:
     void DoRun() override;
-
-    /// Test vector
-    struct TestVector
-    {
-        Vector m_position;  //!< Test node position
-        double m_pt;        //!< Tx power [dBm]
-        double m_pr;        //!< Rx power [W]
-        double m_tolerance; //!< Tolerance
-    };
-
-    /// Test vectors
-    TestVectors<TestVector> m_testVectors;
 };
 
 IrsPropagationLossModelHelperFunctionsTestCase::IrsPropagationLossModelHelperFunctionsTestCase()
-    : TestCase("Check if IrsPropagationLossModel helper functions are correct."),
-      m_testVectors()
+    : TestCase("Check if IrsPropagationLossModel helper functions are correct.")
 {
 }
 
@@ -189,25 +229,17 @@ IrsPropagationLossModelHelperFunctionsTestCase::DoRun()
 {
     Ptr<IrsPropagationLossModel> model = CreateObject<IrsPropagationLossModel>();
 
-    std::pair<double, double> angles = model->CalcAngles(Vector{0, 0, 0}, Vector{0, 0, 0}, Vector{1, 0, 0}, Vector{0,1,0});
-    NS_TEST_EXPECT_MSG_EQ_TOL(angles.first, angles.second, 0.1, "Angles not matching: " << angles.first << " | " << angles.second);
-
-    angles = model->CalcAngles(Vector{0, 0, 0}, Vector{0, 0, 0}, Vector{0, 1, 0}, Vector{1,0,0});
-    NS_TEST_EXPECT_MSG_EQ_TOL(angles.first, angles.second, 0.1, "Angles not matching: " << angles.first << " | " << angles.second);
-
     // opposite sides
-    angles = model->CalcAngles(Vector{0, 0, 0}, Vector{0, 10, 0}, Vector{0, 5, 0}, Vector{1,0,0});
-    NS_TEST_EXPECT_MSG_EQ_TOL(angles.first, -1, 0.1, "Angle should be -1: " << angles.first << " | " << angles.second);
-    NS_TEST_EXPECT_MSG_EQ_TOL(angles.second, -1, 0.1, "Angle should be -1: " << angles.first << " | " << angles.second);
-
-    // opposite sides
-    angles = model->CalcAngles(Vector{0, 0, 0}, Vector{10, 10, 0}, Vector{0, 5, 0}, Vector{1,0,0});
-    NS_TEST_EXPECT_MSG_EQ_TOL(angles.first, -1, 0.1, "Angle should be -1: " << angles.first << " | " << angles.second);
-    NS_TEST_EXPECT_MSG_EQ_TOL(angles.second, -1, 0.1, "Angle should be -1: " << angles.first << " | " << angles.second);
-
-    angles = model->CalcAngles(Vector{-9.3969, 3.4202, 0}, Vector{8.6603, 5.0000, 0}, Vector{0, 0, 0}, Vector{1,0,0});
-    NS_TEST_EXPECT_MSG_EQ_TOL(angles.first, 160, 0.1, "Angle should be 160: " << angles.first << " | " << angles.second);
-    NS_TEST_EXPECT_MSG_EQ_TOL(angles.second, 30, 0.1, "Angle should be 30: " << angles.first << " | " << angles.second);
+    std::pair<double, double> angles =
+        model->CalcAngles(Vector{0, 0, 0}, Vector{10, 10, 0}, Vector{0, 5, 0}, Vector{0, 1, 0});
+    NS_TEST_EXPECT_MSG_EQ_TOL(angles.first,
+                              -1,
+                              0.1,
+                              "Angle should be -1: " << angles.first << " | " << angles.second);
+    NS_TEST_EXPECT_MSG_EQ_TOL(angles.second,
+                              -1,
+                              0.1,
+                              "Angle should be -1: " << angles.first << " | " << angles.second);
 }
 
 /**

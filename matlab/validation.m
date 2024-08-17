@@ -24,8 +24,8 @@ pos_ue = pos_ris + [d_rx*cosd(45); d_rx*sind(45); 0]
 v = zeros(3,1);
 
 % compute the range and angle of the RIS from the base station and the UE
-[r_ap_ris,ang_ap_ris] = rangeangle(pos_ap,pos_ris);
-[r_ue_ris,ang_ue_ris] = rangeangle(pos_ue,pos_ris);
+[r_ap_ris,ang_ap_ris,r_ris_ue,ang_ue_ris] = calcangle(ap, ue, ris, [0,1,0]);
+
 
 % signal
 fs = 10e6;

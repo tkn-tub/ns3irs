@@ -26,6 +26,7 @@
 #include "ns3/propagation-loss-model.h"
 #include "ns3/vector.h"
 
+class IrsPropagationLossModelTestCase;
 class IrsPropagationLossModelHelperFunctionsTestCase;
 
 namespace ns3
@@ -155,6 +156,7 @@ class IrsPropagationLossModel : public PropagationLossModel
     double m_frequency;
     double m_lambda;
 
+    friend class ::IrsPropagationLossModelTestCase;
     friend class ::IrsPropagationLossModelHelperFunctionsTestCase;
 };
 

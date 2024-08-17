@@ -147,10 +147,10 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector A,
                                     ns3::Vector N) const
 {
     // Vector from IRS to A and B
-    ns3::Vector IA = A - I;
+    ns3::Vector AI = I - A;
     ns3::Vector IB = B - I;
 
-    double IAnorm = IA.GetLength();
+    double IAnorm = AI.GetLength();
     double IBnorm = IB.GetLength();
 
     // avoid division by zero
@@ -160,7 +160,7 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector A,
     }
 
     // Calculate the angle of incidence
-    double cosThetaInc = (IA * N) / IA.GetLength();
+    double cosThetaInc = (AI * N) / AI.GetLength();
     double thetaInc = std::acos(std::clamp(cosThetaInc, -1.0, 1.0));
     double thetaIncDeg = thetaInc * (180.0 / M_PI);
 
@@ -170,9 +170,9 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector A,
     double thetaRefDeg = thetaRef * (180.0 / M_PI);
 
     // check if A and B are on opposite sites
-    double C = N.x * (A.x - I.x) + N.y * (A.y - I.y) + N.z * (A.z - I.z);
-    double D = N.x * (B.x - I.x) + N.y * (B.y - I.y) + N.z * (B.z - I.z);
-    if (std::abs(C * D) < 1e-6)
+    double e1 = N.x * (A.x - I.x) + N.y * (A.y - I.y) + N.z * (A.z - I.z);
+    double e2 = N.x * (B.x - I.x) + N.y * (B.y - I.y) + N.z * (B.z - I.z);
+    if (e1 * e2 < std::numeric_limits<double>::epsilon())
     {
         return std::make_pair(-1, -1);
     }
@@ -248,7 +248,7 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
                         << "RX Position: " << b->GetPosition() << "\n"
                         << "IRS Direction: " << node->GetObject<Irs>()->GetDirection() << "\n"
                         << "Ingoing Angle (degrees): " << angles.first << "\n"
-                        << "Outgoing Angle (degrees): " << angles.first);
+                        << "Outgoing Angle (degrees): " << angles.second);
 
         // if the incoming angle is < 1 or > 179, then the IRS is not in the line of sight
         // if Nodes are on opposite sides angles are (-1, -1)

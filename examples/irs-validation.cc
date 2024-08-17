@@ -208,7 +208,7 @@ RunScenario(std::string scenario,
     if (scenario != "LOS")
     {
         IrsHelper irsHelper;
-        irsHelper.SetDirection(Vector(1, 0, 0));
+        irsHelper.SetDirection(Vector(0, 1, 0));
         irsHelper.SetLookupTable(lookuptable);
         irsHelper.Install(irsNode);
 
@@ -355,7 +355,7 @@ main(int argc, char* argv[])
                     wifiManager,
                     runNumber,
                     irs,
-                    "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
+                    "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv");
     }
     else if (scenario == "IrsConstructive")
     {
@@ -365,7 +365,7 @@ main(int argc, char* argv[])
                     wifiManager,
                     runNumber,
                     irs,
-                    "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
+                    "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv");
     }
     else if (scenario == "IrsDestructive")
     {
@@ -375,7 +375,7 @@ main(int argc, char* argv[])
                     wifiManager,
                     runNumber,
                     irs,
-                    "contrib/irs/examples/lookuptables/IRS_400_IN160_OUT21_FREQ5.21GHz_destructive.csv");
+                    "contrib/irs/examples/lookuptables/IRS_400_IN110_OUT69_FREQ5.21GHz_destructive.csv");
     }
     return 0;
 }
