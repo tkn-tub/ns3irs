@@ -22,7 +22,7 @@
  * Authors: Pavel Boyko <boyko@iitp.ru> (original author)
  *          Jakob Rühlow <j.ruehlow@campus.tu-berlin.de> (modifications)
  *
- * Description: Classical hidden terminal problem and solution using IRS
+ * Description: Classical hidden node problem and solution using IRS
  */
 
 #include "ns3/boolean.h"
@@ -86,8 +86,8 @@ experiment(bool useIRS, std::string wifiManager)
     if (useIRS)
     {
         IrsHelper irsHelper;
-        irsHelper.SetDirection(Vector(1, 0, 0));
-        irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/IRS_400_IN120_OUT1_FREQ5.21GHz_hidden_node.csv");
+        irsHelper.SetDirection(Vector(0, 1, 0));
+        irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/IRS_400_IN150_OUT89_FREQ5.21GHz_hidden_node.csv");
         irsHelper.Install(irsNode);
 
         Ptr<FriisPropagationLossModel> irsModel = CreateObject<FriisPropagationLossModel>();
@@ -225,10 +225,10 @@ main(int argc, char** argv)
         wifiManager);
     cmd.Parse(argc, argv);
 
-    std::cout << "Hidden station experiment without IRS:\n" << std::flush;
+    std::cout << "Hidden node problem without IRS:\n" << std::flush;
     experiment(false, wifiManager);
     std::cout << "------------------------------------------------\n";
-    std::cout << "Hidden station experiment with IRS:\n";
+    std::cout << "Hidden node problem with IRS:\n";
     experiment(true, wifiManager);
 
     return 0;

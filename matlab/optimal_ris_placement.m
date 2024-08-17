@@ -46,25 +46,33 @@ chanAPToUE = phased.FreeSpace('SampleRate',fs,'PropagationSpeed',c,'MaximumDista
 
 stv = getSteeringVector(ris);
 % Loop through different d_rx values
-for i = 1:length(x_ris_range) 
+for i = 1:length(x_ris_range)
     pos_ris = [x_ris_range(i); -1; 0];
-    
+
     % compute the range and angle of the RIS from the base station and the UE
-    [r_ap_ris,ang_ap_ris] = rangeangle(pos_ap,pos_ris);
-    [r_ue_ris,ang_ue_ris] = rangeangle(pos_ue,pos_ris);
- 
+    [r_ap_ris,ang_ap_ris,r_ris_ue,ang_ue_ris] = calcangle(ap, ue, ris, [0,1,0]);
+
+    % Calculate steering vectors for input and output angles
     g = stv(fc, ang_ap_ris);
     hr = stv(fc, ang_ue_ris);
-    rcoeff_ris = exp(1i*(-angle(hr)-angle(g)));
+
+    % Calculate the direct path phase
+    direct_path_phase = 2 * pi * d_ap_ue / lambda;
+    % Calculate the reflected path phase
+    reflected_path_phase = 2 * pi * (r_ap_ris + r_ue_ris) / lambda;
+    % Calculate the required phase shift for constructive interference
+    required_phase_shift = (2 * pi) - (reflected_path_phase - direct_path_phase);
+    % Calculate the optimal reflection coefficient
+    rcoeff_ris = exp(1i * (required_phase_shift - angle(hr) - angle(g)));
 
     x_ris_in = chanAPToRIS(xt,pos_ap,pos_ris,v,v);
     x_ris_out = ris(x_ris_in,ang_ap_ris,ang_ue_ris,rcoeff_ris);
     ylosris = chanRISToUE(x_ris_out,pos_ris,pos_ue,v,v) + chanAPToUE(xt,pos_ap,pos_ue,v,v);
     RXpowerRis = pow2db(bandpower(ylosris)) - txPower;
-    
+
     ylosris = chanRISToUE(x_ris_out,pos_ris,pos_ue,v,v);
     RXpowerOnlyRis = pow2db(bandpower(ylosris)) - txPower;
-    
+
     % LOS path propagation
     yref = chanAPToUE(xt,pos_ap,pos_ue,v,v);
     RXpowerLos = pow2db(bandpower(yref)) - txPower;
