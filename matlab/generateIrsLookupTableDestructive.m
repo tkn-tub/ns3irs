@@ -22,7 +22,7 @@ chanAPToRIS = phased.FreeSpace('SampleRate',10e6,'PropagationSpeed',c,...
     'MaximumDistanceSource','Property','MaximumDistance',500, 'OperatingFrequency', fc);
 
 % Define angle range for lookup table
-angles = 1:1:179;
+angles = 0:1:180;
 
 % RIS position
 d2_ris = 10;
