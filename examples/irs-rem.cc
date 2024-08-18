@@ -25,6 +25,7 @@ main(int argc, char* argv[])
 
     Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
 
+    // ns3::LogComponentEnable("IrsPropagationLossModel", ns3::LOG_LEVEL_ALL);
     // Create Nodes: eNodeB and UE
     NodeContainer enbNodes;
     NodeContainer ueNodes;
@@ -34,12 +35,13 @@ main(int argc, char* argv[])
     irsNodes.Create(1);
 
     IrsHelper irsHelper;
-    irsHelper.SetDirection(Vector(1, 0, 0));
-    irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
+    irsHelper.SetDirection(Vector(0, 1, 0));
+    irsHelper.SetLookupTable(
+        "contrib/irs/examples/lookuptables/IRS_400_IN153_OUT27_FREQ1.50GHz_rem.csv");
     irsHelper.Install(irsNodes);
 
     Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
-    irsLossModel->SetFrequency(5.21e9);
+    irsLossModel->SetFrequency(1.5e9);
     lteHelper->SetAttribute("PathlossModel", StringValue("ns3::IrsPropagationLossModel"));
     lteHelper->SetPathlossModelAttribute("IrsNodes", PointerValue(&irsNodes));
     lteHelper->SetPathlossModelAttribute("LossModel", PointerValue(irsLossModel));
@@ -50,7 +52,7 @@ main(int argc, char* argv[])
     Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
     positionAlloc->Add(Vector(0.0, 0.0, 0.0));    // Position for eNodeB
     positionAlloc->Add(Vector(0.0, 0.0, 0.0));    // Position for UE
-    positionAlloc->Add(Vector(1.35, -1.35, 0.0)); // Position for UE
+    positionAlloc->Add(Vector(5, -10, 0.0)); // Position for UE
 
     mobility.SetPositionAllocator(positionAlloc);
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -82,10 +84,12 @@ main(int argc, char* argv[])
     Ptr<RadioEnvironmentMapHelper> remHelper = CreateObject<RadioEnvironmentMapHelper>();
     remHelper->SetAttribute("ChannelPath", StringValue("/ChannelList/0"));
     remHelper->SetAttribute("OutputFile", StringValue("rem.out"));
-    remHelper->SetAttribute("XMin", DoubleValue(-400.0));
-    remHelper->SetAttribute("XMax", DoubleValue(400.0));
-    remHelper->SetAttribute("YMin", DoubleValue(-300.0));
+    remHelper->SetAttribute("XMin", DoubleValue(-300.0));
+    remHelper->SetAttribute("XMax", DoubleValue(300.0));
+    remHelper->SetAttribute("YMin", DoubleValue(-50.0));
     remHelper->SetAttribute("YMax", DoubleValue(300.0));
+    remHelper->SetAttribute("XRes", UintegerValue(800));
+    remHelper->SetAttribute("YRes", UintegerValue(600));
     remHelper->SetAttribute("Z", DoubleValue(0.0));
     remHelper->Install();
 
