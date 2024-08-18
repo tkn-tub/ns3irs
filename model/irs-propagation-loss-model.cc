@@ -252,7 +252,7 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
 
         // if the incoming angle is < 1 or > 179, then the IRS is not in the line of sight
         // if Nodes are on opposite sides angles are (-1, -1)
-        if (angles.first < 1 || angles.first > 179 || angles.second < 1 || angles.second > 179)
+        if (angles.first < 0 || angles.second < 0)
         {
             NS_LOG_INFO("IRS (" << node->GetId() << ") with position: "
                                 << node->GetObject<MobilityModel>()->GetPosition()

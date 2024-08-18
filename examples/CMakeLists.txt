@@ -41,3 +41,12 @@ build_lib_example(
         ${libflow-monitor}
       # EXECUTABLE_DIRECTORY_PATH ${scratch_directory}/
 )
+
+build_lib_example(
+    NAME irs-rem
+    SOURCE_FILES irs-rem.cc
+    LIBRARIES_TO_LINK
+        ${libirs}
+        ${libwifi}
+        ${liblte}
+)
