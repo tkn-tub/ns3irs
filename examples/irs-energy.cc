@@ -112,7 +112,7 @@ ScenarioStatistics::RxCallback(std::string path, Ptr<const Packet> packet, const
 double
 ScenarioStatistics::GetThroughput()
 {
-    m_throughput = (m_bytesTotal * 8.0) / (1e6 * 10); // Mbps over 10 seconds
+    m_throughput = (m_bytesTotal * 8.0) / (1e6 * 60 * 60); // Mbps over 10 seconds
     return m_throughput;
 }
 
@@ -332,7 +332,7 @@ RunScenario(std::string scenario,
         MakeCallback(&ScenarioStatistics::TxCallback, &stats));
 
     // Run simulation
-    Simulator::Stop(Seconds(10));
+    Simulator::Stop(Minutes(60));
     Simulator::Run();
 
     std::cout << std::fixed << std::setprecision(4) << "Scenario: " << stats.GetScenarioName()
