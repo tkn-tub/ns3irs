@@ -5,7 +5,6 @@ build_lib_example(
         ${libirs}
         ${libwifi}
         ${libinternet}
-      # EXECUTABLE_DIRECTORY_PATH ${scratch_directory}/
 )
 
 build_lib_example(
@@ -15,7 +14,6 @@ build_lib_example(
         ${libirs}
         ${libwifi}
         ${libinternet}
-      # EXECUTABLE_DIRECTORY_PATH ${scratch_directory}/
 )
 
 build_lib_example(
@@ -26,8 +24,17 @@ build_lib_example(
         ${libwifi}
         ${libinternet}
         ${libapplications}
-        ${libflow-monitor}
-      # EXECUTABLE_DIRECTORY_PATH ${scratch_directory}/
+)
+
+build_lib_example(
+    NAME irs-energy
+    SOURCE_FILES irs-energy.cc
+    LIBRARIES_TO_LINK
+        ${libirs}
+        ${libwifi}
+        ${libinternet}
+        ${libapplications}
+        ${libenergy}
 )
 
 build_lib_example(
@@ -39,7 +46,6 @@ build_lib_example(
         ${libinternet}
         ${libapplications}
         ${libflow-monitor}
-      # EXECUTABLE_DIRECTORY_PATH ${scratch_directory}/
 )
 
 build_lib_example(
