@@ -1,3 +1,5 @@
+% plot SNR for different IRS sizes with moving UE
+
 function validation = validation_plotChangingSizes(ris_sizes)
 fc = 5.21e9;
 c = physconst('lightspeed');
@@ -7,7 +9,7 @@ fs = 10e6;
 txPower = -17;
 
 % Define UE distances to simulate (in meters)
-ue_distances = 0.25:0.1:10;
+ue_distances = 0.1:0.1:10;
 
 % Fixed angles (in degrees)
 ap_to_ris_angle = 170;
@@ -47,7 +49,7 @@ for i = 1:size(ris_sizes, 1)
         pos_ue = d_ris_ue * [cosd(ris_to_ue_angle); sind(ris_to_ue_angle); 0];
 
         % Compute the range and angle of the RIS from the base station and the UE
-        [~,ang_ap_ris,~,ang_ue_ris] = calcangle(ap, ue, ris, [0,1,0]);
+        [~,ang_ap_ris,~,ang_ue_ris] = calcangle(pos_ap, pos_ue, pos_ris, [0,1,0]);
 
 
         g = stv(fc, ang_ap_ris);
@@ -85,7 +87,7 @@ ris_sizes = unique(results.Elements);
 % Create color map
 colors = jet(length(ris_sizes));
 
-sim_results = readtable('simulation_results.csv');
+% sim_results = readtable('simulation_results.csv');
 
 % Create figure with subplots
 figure;
@@ -93,8 +95,8 @@ figure;
 % Plot titles
 plot_titles = {'Only RIS', 'RIS + LOS'};
 y_data = {'OnlyRIS', 'RIS_LOS'};
-sim_y_data_ris = {'IRS_100_IN170_OUT10_FREQ5_21GHz_csv_ris', 'IRS_200_IN170_OUT10_FREQ5_21GHz_csv_ris', 'IRS_300_IN170_OUT10_FREQ5_21GHz_csv_ris', 'IRS_400_IN170_OUT10_FREQ5_21GHz_csv_ris'};
-sim_y_data_ris_los = {'IRS_100_IN170_OUT10_FREQ5_21GHz_csv_ris_los', 'IRS_200_IN170_OUT10_FREQ5_21GHz_csv_ris_los', 'IRS_300_IN170_OUT10_FREQ5_21GHz_csv_ris_los', 'IRS_400_IN170_OUT10_FREQ5_21GHz_csv_ris_los'};
+% sim_y_data_ris = {'IRS_100_IN170_OUT10_FREQ5_21GHz_csv_ris', 'IRS_200_IN170_OUT10_FREQ5_21GHz_csv_ris', 'IRS_300_IN170_OUT10_FREQ5_21GHz_csv_ris', 'IRS_400_IN170_OUT10_FREQ5_21GHz_csv_ris'};
+% sim_y_data_ris_los = {'IRS_100_IN170_OUT10_FREQ5_21GHz_csv_ris_los', 'IRS_200_IN170_OUT10_FREQ5_21GHz_csv_ris_los', 'IRS_300_IN170_OUT10_FREQ5_21GHz_csv_ris_los', 'IRS_400_IN170_OUT10_FREQ5_21GHz_csv_ris_los'};
 
 
 % ris
@@ -104,9 +106,9 @@ for i = 1:length(ris_sizes)
     mask = results.Elements == ris_sizes(i);
     plot(results.RIS_UE_Distance(mask), results.(y_data{1})(mask), '-', 'Color', colors(i,:), 'LineWidth', 2);
 end
-for i = 1:length(sim_y_data_ris)
-    plot(sim_results.ueDistance, sim_results.(sim_y_data_ris{i}), '--k', 'LineWidth', 2);
-end
+% for i = 1:length(sim_y_data_ris)
+%     plot(sim_results.ueDistance, sim_results.(sim_y_data_ris{i}), '--k', 'LineWidth', 2);
+% end
 
 xlabel('RIS/UE Distance (m)');
 ylabel('Received Power (dB)');
@@ -122,9 +124,9 @@ for i = 1:length(ris_sizes)
     mask = results.Elements == ris_sizes(i);
     plot(results.RIS_UE_Distance(mask), results.(y_data{2})(mask), '-', 'Color', colors(i,:), 'LineWidth', 2);
 end
-for i = 1:length(sim_y_data_ris_los)
-    plot(sim_results.ueDistance, sim_results.(sim_y_data_ris_los{i}), '--k', 'LineWidth', 2);
-end
+% for i = 1:length(sim_y_data_ris_los)
+%     plot(sim_results.ueDistance, sim_results.(sim_y_data_ris_los{i}), '--k', 'LineWidth', 2);
+% end
 xlabel('RIS/UE Distance (m)');
 ylabel('Received Power (dB)');
 title([plot_titles{2}, ' Received Power vs RIS/UE Distance']);
@@ -139,12 +141,6 @@ sgtitle('Received Power vs UE Distance for Different Scenarios', 'FontSize', 16)
 validation = results;
 end
 
-function val_tables = validation_genTablesChangingSizes(ris_sizes)
-val_tables = table();
-for i = 1:size(ris_sizes, 1)
-    ris_table = generateIrsLookupTable(170, 10, ris_sizes(i, 1), ris_sizes(i, 2), 5.21e9);
-end
-end
 % Define RIS sizes to simulate
 ris_sizes = [
     % 5, 10;

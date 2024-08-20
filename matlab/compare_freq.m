@@ -1,3 +1,5 @@
+% plot gain/phase shift differences for different frequencies
+
 function ris_lookup_table = generate_ris_lookup_table(optimal_in_angle, optimal_out_angle, fc)
 % Set up parameters
 c = physconst('lightspeed');
@@ -38,8 +40,7 @@ v = [0; 0; 0]; % Static scenario
 pos_ap_optimal = [d2_ris*cosd(optimal_in_angle); d2_ris*sind(optimal_in_angle); 0];
 pos_ue_optimal = [d2_ris*cosd(optimal_out_angle); d2_ris*sind(optimal_out_angle); 0];
 
-[~,ang_ap_ris_optimal,~,ang_ue_ris_optimal] = calcangle(ap, ue, ris, [0,1,0]);
-
+[~,ang_ap_ris_optimal,~,ang_ue_ris_optimal] = calcangle(pos_ap_optimal, pos_ue_optimal, pos_ris, [0,1,0]);
 
 stv = getSteeringVector(ris);
 g_optimal = stv(fc, ang_ap_ris_optimal);
@@ -78,17 +79,14 @@ for in_angle = angles
 end
 
 % Convert to table
-ris_lookup_table = array2table(results, 'VariableNames', {'in_angle', 'out_angle', 'gain_db', 'phase_shift'});
+ris_lookup_table = array2table(results, 'VariableNames', {'in_angle', 'out_angle', 'gain_dB', 'phase_shift'});
 end
 % Generate the lookup table
 in = 135;
 out = 15;
 
-% table1 = generate_ris_lookup_table(in, out, 5.21e9);
-% table2 = generate_ris_lookup_table(in, out, 28e9);
-
-table1 = ris_table;
-table2 = ris_tableCopy;
+table1 = generate_ris_lookup_table(in, out, 5.21e9);
+table2 = generate_ris_lookup_table(in, out, 28e9);
 
 % Compute differences
 diff_gain = table1.gain_dB - table2.gain_dB;
@@ -96,7 +94,7 @@ diff_phase = table1.phase_shift - table2.phase_shift;
 
 % Create a new table with differences
 diff_table = table(table1.in_angle, table1.out_angle, diff_gain, diff_phase, ...
-    'VariableNames', {'in_angle', 'out_angle', 'diff_gain_db', 'diff_phase_shift'});
+    'VariableNames', {'in_angle', 'out_angle', 'diff_gain_dB', 'diff_phase_shift'});
 
 % Display the difference table
 disp(diff_table);

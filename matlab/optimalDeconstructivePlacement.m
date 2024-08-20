@@ -1,3 +1,6 @@
+% gradient descent to find optimal IRS pos for destructive interference
+% where amplitude of LoS and IRS signal are equal
+
 function fun = calcDiff(ris)
 c = physconst('lightspeed');
 fc = 5.21e9;

@@ -1,4 +1,4 @@
-% Generate the lookup table
+% Generate the lookup table for radio environment map
 Nr = 20;
 Nc = 20;
 freq = 1.5e9;

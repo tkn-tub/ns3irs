@@ -1,10 +1,15 @@
 function plt = plotIrsLookupTable(ris_table, opt_in_angle, opt_out_angle)
+% plotIrsLookupTable
+%   ris_table
+%   opt_in_angle, opt_out_angle - angles the RIS is optimized for
+
     % Create matrices of the gain and phase shift
     out_angles = unique(ris_table.out_angle);
     in_angles = unique(ris_table.in_angle);
     gain_matrix = reshape(ris_table.gain_dB, length(out_angles), length(in_angles));
     phase_matrix = reshape(ris_table.phase_shift, length(out_angles), length(in_angles));
     
+    % clear lowest 6% for better plot
     threshold = 0.06; % in percent
     cleaned_gain_matrix = clear_low_gain_values(gain_matrix, threshold);
     
