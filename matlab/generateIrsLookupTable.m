@@ -1,8 +1,22 @@
-function ris_table = generateIrsLookupTable(optimal_in_angle, optimal_out_angle, Nr, Nc, fc)
+function ris_table = generateIrsLookupTable(optimal_in_angle, optimal_out_angle, Nr, Nc, fc, r_ap_ue, r_ap_ris, r_ue_ris, phase_shift, file_name)
 % generate_ris_lookup_table
 %   optimal_in_angle, optimal_out_angle - angles the RIS is optimized for
 %   Nr, Nc - number of rows/columns of the RIS
 %   fc - carrier frequency
+%   r_ue_ap, r_ap_ris, r_ue_ris - distances for the respective paths
+%   phase_shift - phase shift of irs compared to los (pi for destructive interference, 2pi for constructive interference)
+%   file_name - IRS_[...]_[file_name].csv
+
+only_in_out = false;
+file_name_set = false;
+
+if (nargin == 5)
+    only_in_out = true;
+elseif(nargin == 10)
+    file_name_set = true;
+elseif(nargin ~= 9)
+    error("Wrong amount of arguments");
+end
 
 % Set up parameters
 c = physconst('lightspeed');
@@ -30,10 +44,18 @@ v = zeros(3,1);
 
 stv = getSteeringVector(ris);
 
-stv = getSteeringVector(ris);
 g = stv(fc, optimal_in_angle);
 hr = stv(fc, optimal_out_angle);
-rcoeff_ris = exp(1i*(-angle(hr)-angle(g)));
+
+if (only_in_out)
+    rcoeff_ris = exp(1i*(-angle(hr)-angle(g)));
+else
+    % Calculate the optimal reflection coefficient
+    direct_path_phase = 2 * pi * r_ap_ue / lambda;
+    reflected_path_phase = 2 * pi * (r_ap_ris + r_ue_ris) / lambda;
+    required_phase_shift = phase_shift - (reflected_path_phase - direct_path_phase);
+    rcoeff_ris = exp(1i * (required_phase_shift - angle(hr) - angle(g)));
+end
 
 % Generate lookup table
 [in_angles, out_angles] = meshgrid(angles, angles);
@@ -76,7 +98,11 @@ end
 ris_table = array2table(results, 'VariableNames', {'in_angle', 'out_angle', 'gain_dB', 'phase_shift'});
 
 % Export table
-filename = sprintf('IRS_%d_IN%d_OUT%d_FREQ%.2fGHz_destructive.csv', Nr*Nc, optimal_in_angle, optimal_out_angle, fc/1e9);
+if (file_name_set)
+    filename = sprintf('IRS_%d_IN%d_OUT%d_FREQ%.2fGHz_%s.csv', Nr*Nc, optimal_in_angle, optimal_out_angle, fc/1e9, file_name);
+else
+    filename = sprintf('IRS_%d_IN%d_OUT%d_FREQ%.2fGHz.csv', Nr*Nc, optimal_in_angle, optimal_out_angle, fc/1e9);
+end
 writetable(ris_table, filename, 'Delimiter', ',', 'WriteRowNames', true);
 
 % Display a message to confirm the export

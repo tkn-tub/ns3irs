@@ -50,7 +50,7 @@ for i = 1:length(x_ris_range)
     pos_ris = [x_ris_range(i); -1; 0];
 
     % compute the range and angle of the RIS from the base station and the UE
-    [r_ap_ris,ang_ap_ris,r_ris_ue,ang_ue_ris] = calcangle(ap, ue, ris, [0,1,0]);
+    [r_ap_ris,ang_ap_ris,r_ue_ris,ang_ue_ris] = calcangle(pos_ap, pos_ue, pos_ris, [0,1,0]);
 
     % Calculate steering vectors for input and output angles
     g = stv(fc, ang_ap_ris);
