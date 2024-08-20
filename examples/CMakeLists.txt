@@ -17,6 +17,15 @@ build_lib_example(
 )
 
 build_lib_example(
+    NAME irs-optimal-placement
+    SOURCE_FILES irs-optimal-placement.cc
+    LIBRARIES_TO_LINK
+        ${libirs}
+        ${libwifi}
+        ${libinternet}
+)
+
+build_lib_example(
     NAME irs-validation
     SOURCE_FILES irs-validation.cc
     LIBRARIES_TO_LINK

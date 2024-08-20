@@ -14,19 +14,19 @@ dc = 0.5*lambda;
 element_size = (lambda^2)/(4*pi);
 
 txPower = -17;
-noise = -93.966;
+noise = -94;
 
 % construct surface
 ris = helperRISSurface('Size',[Nr Nc],'ElementSpacing',[dr dc],...
     'ReflectorElement',phased.IsotropicAntennaElement,'OperatingFrequency',fc);
 
-d_ap_ue = 20;
+d_ap_ue = 15;
 pos_ap = [0;0;0];
 pos_ue = [d_ap_ue;0;0];
 
 v = zeros(3,1);
 
-step_size = 0.05;
+step_size = 0.5;
 
 x_ris_range = 0:step_size:d_ap_ue;
 
@@ -88,14 +88,15 @@ end
 figure;
 
 hold on;
-plot(x_ris_range, ris_array, 'r', 'LineWidth', 2);
-plot(x_ris_range, los_array, 'g--', 'LineWidth', 2);
-plot(x_ris_range, onlyris_array, 'b', 'LineWidth', 2);
-plot(x_ris_range, ris_etsi_array, 'c--', 'LineWidth', 2);
-% plot(x_ris_range, onlyris_array-mean_diff, 'm--', 'LineWidth', 2);
+plot(x_ris_range, ris_array-noise, 'r', 'LineWidth', 2);
+plot(x_ris_range, los_array-noise, 'g--', 'LineWidth', 2);
+plot(x_ris_range, onlyris_array-noise, 'b', 'LineWidth', 2);
+plot(x_ris_range, ris_etsi_array-noise, 'c--', 'LineWidth', 2);
+plot(optimalrisplacementns3.ris_x, optimalrisplacementns3.only_irs-noise, 'm--', 'LineWidth', 2);
+plot(optimalrisplacementns3.ris_x, optimalrisplacementns3.irs_los-noise, 'y--', 'LineWidth', 2);
 
 xlabel('x pos [m]');
-ylabel('Received Power [dB]');
+ylabel('SNR [dBm]');
 title(sprintf('Rx Power vs. Position of RIS for N = %d (%d x %d)', Nr*Nc, Nr, Nc));
-legend('RIS + LOS', 'LOS', 'RIS', 'RIS ETSI');
+legend('RIS + LOS', 'LOS', 'RIS', 'RIS ETSI', 'RIS (Ns3)', 'RIS + LOS (Ns3)');
 grid on;
