@@ -1,8 +1,10 @@
+% Static AP/UE moving RIS on x axes + calculating optimal phase shift to
+% find optimal placement
+
 fc = 5.21e9;
 c = physconst('lightspeed');
 lambda = c/fc;
 rng(2024);
-fs = 10e6;
 
 % Setup surface
 Nr = 20;
@@ -18,13 +20,13 @@ noise = -93.966;
 ris = helperRISSurface('Size',[Nr Nc],'ElementSpacing',[dr dc],...
     'ReflectorElement',phased.IsotropicAntennaElement,'OperatingFrequency',fc);
 
-d_ap_ue = 30;
+d_ap_ue = 20;
 pos_ap = [0;0;0];
 pos_ue = [d_ap_ue;0;0];
 
 v = zeros(3,1);
 
-step_size = lambda
+step_size = 0.05;
 
 x_ris_range = 0:step_size:d_ap_ue;
 
@@ -43,8 +45,11 @@ chanAPToRIS = phased.FreeSpace('SampleRate',fs,'PropagationSpeed',c,'MaximumDist
 chanRISToUE = phased.FreeSpace('SampleRate',fs,'PropagationSpeed',c,'MaximumDistanceSource','Property','MaximumDistance',500,'OperatingFrequency',fc);
 chanAPToUE = phased.FreeSpace('SampleRate',fs,'PropagationSpeed',c,'MaximumDistanceSource','Property','MaximumDistance',500,'OperatingFrequency',fc);
 
-
 stv = getSteeringVector(ris);
+% LOS path propagation
+
+yref = chanAPToUE(xt,pos_ap,pos_ue,v,v);
+RXpowerLos = pow2db(bandpower(yref)) - txPower;
 % Loop through different d_rx values
 for i = 1:length(x_ris_range)
     pos_ris = [x_ris_range(i); -1; 0];
@@ -56,26 +61,18 @@ for i = 1:length(x_ris_range)
     g = stv(fc, ang_ap_ris);
     hr = stv(fc, ang_ue_ris);
 
-    % Calculate the direct path phase
-    direct_path_phase = 2 * pi * d_ap_ue / lambda;
-    % Calculate the reflected path phase
-    reflected_path_phase = 2 * pi * (r_ap_ris + r_ue_ris) / lambda;
-    % Calculate the required phase shift for constructive interference
-    required_phase_shift = (2 * pi) - (reflected_path_phase - direct_path_phase);
-    % Calculate the optimal reflection coefficient
-    rcoeff_ris = exp(1i * (required_phase_shift - angle(hr) - angle(g)));
+    direct_path_phase = (2 * pi * d_ap_ue) / lambda;
+    reflected_path_phase = (2 * pi * (r_ap_ris + r_ue_ris)) / lambda;
+    required_phase_shift =  reflected_path_phase - direct_path_phase;
+    rcoeff_ris = exp(1i * (wrapToPi(required_phase_shift) - angle(hr) - angle(g)));
 
     x_ris_in = chanAPToRIS(xt,pos_ap,pos_ris,v,v);
     x_ris_out = ris(x_ris_in,ang_ap_ris,ang_ue_ris,rcoeff_ris);
-    ylosris = chanRISToUE(x_ris_out,pos_ris,pos_ue,v,v) + chanAPToUE(xt,pos_ap,pos_ue,v,v);
+    ylosris = chanRISToUE(x_ris_out,pos_ris,pos_ue,v,v) + yref;
     RXpowerRis = pow2db(bandpower(ylosris)) - txPower;
 
     ylosris = chanRISToUE(x_ris_out,pos_ris,pos_ue,v,v);
     RXpowerOnlyRis = pow2db(bandpower(ylosris)) - txPower;
-
-    % LOS path propagation
-    yref = chanAPToUE(xt,pos_ap,pos_ue,v,v);
-    RXpowerLos = pow2db(bandpower(yref)) - txPower;
 
     risA = 1;
     RXPowerRisETSI = -pow2db(((4*pi*r_ap_ris*r_ue_ris)/(prod([Nr, Nc])*element_size*risA)).^2);
@@ -87,8 +84,6 @@ for i = 1:length(x_ris_range)
     los_array(i) = RXpowerLos;
 
 end
-mean_diff = mean(onlyris_array - ris_etsi_array) % -9.942999727847097
-
 % Plot the results
 figure;
 
