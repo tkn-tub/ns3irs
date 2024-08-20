@@ -86,7 +86,7 @@ parfor i = 1:num_angles
     % Calculate phase shift
     phase_in = angle(x_ris_in);
     phase_out = angle(x_ris_out);
-    phase_shift = wrapToPi(phase_out - phase_in);
+    phase_shift = wrapToPi(phase_in - phase_out);
 
     % Calculate mean value
     phase_shift = mean(phase_shift);

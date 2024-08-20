@@ -1,11 +1,11 @@
 % Generate the lookup table for the Hidden Node Problem
-Nr = 20;
+Nr = 25;
 Nc = 20;
 freq = 5.21e9;
 
 ap = [0;0;0];
 ue = [100;0;0];
-ris = [1;-1.75;0];
+ris = [50;-2;0];
 
 [r_ap_ris,a_ap_ris,r_ris_ue,a_ris_ue] = calcangle(ap, ue, ris, [0,1,0])
 
