@@ -29,6 +29,7 @@
 #include "ns3/mobility-model.h"
 #include "ns3/object-factory.h"
 #include "ns3/pointer.h"
+#include "ns3/random-variable-stream.h"
 #include "ns3/wifi-net-device.h"
 #include "ns3/wifi-phy.h"
 
@@ -146,6 +147,14 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector A,
                                     ns3::Vector I,
                                     ns3::Vector N) const
 {
+    // check if A and B are on opposite sites
+    double e1 = N.x * (A.x - I.x) + N.y * (A.y - I.y) + N.z * (A.z - I.z);
+    double e2 = N.x * (B.x - I.x) + N.y * (B.y - I.y) + N.z * (B.z - I.z);
+    if (e1 * e2 < std::numeric_limits<double>::epsilon())
+    {
+        return std::make_pair(-1, -1);
+    }
+
     // Vector from IRS to A and B
     ns3::Vector AI = I - A;
     ns3::Vector IB = B - I;
@@ -168,14 +177,6 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector A,
     double cosThetaRef = (IB * N) / IB.GetLength();
     double thetaRef = std::acos(std::clamp(cosThetaRef, -1.0, 1.0));
     double thetaRefDeg = thetaRef * (180.0 / M_PI);
-
-    // check if A and B are on opposite sites
-    double e1 = N.x * (A.x - I.x) + N.y * (A.y - I.y) + N.z * (A.z - I.z);
-    double e2 = N.x * (B.x - I.x) + N.y * (B.y - I.y) + N.z * (B.z - I.z);
-    if (e1 * e2 < std::numeric_limits<double>::epsilon())
-    {
-        return std::make_pair(-1, -1);
-    }
 
     // Return both angles as a pair
     return std::make_pair(thetaIncDeg, thetaRefDeg);
@@ -270,12 +271,20 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
         // pathloss tx to irs
         double pl_irs = m_lossModel->CalcRxPower(txPowerDbm, a, node->GetObject<MobilityModel>());
         NS_LOG_DEBUG("PL TX to IRS (dBm): " << pl_irs);
+
         // gain of irs
         pl_irs += modifier.gain;
+
+        // add random variable to account for small-scale fading or measurement noise
+        // Normal Distribution (0, 0.1)
+        Ptr<NormalRandomVariable> rng = CreateObject<NormalRandomVariable>();
+        rng->SetAttribute("Mean", DoubleValue(0.0));
+        rng->SetAttribute("Variance", DoubleValue(0.1));
+        pl_irs += rng->GetValue();
+
         NS_LOG_DEBUG("PL with IRS Gain (dBm): " << pl_irs);
         // pathloss irs to rx
         pl_irs = m_lossModel->CalcRxPower(pl_irs, node->GetObject<MobilityModel>(), b);
-        // TODO: error model
 
         // calculate phase of irs path
         double theta = (2 * M_PI * d) / m_lambda;
