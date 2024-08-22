@@ -200,7 +200,7 @@ RunSimulation(bool useIRS,
     Simulator::Stop(Seconds(simTime));
 
     // Schedule throughput calculation
-    for (double t = 1.0; t <= simTime; t += 1.0)
+    for (double t = 1.0; t <= simTime; t += 0.5)
     {
         Simulator::Schedule(Seconds(t), &CalculateThroughput, monitor, &data1, &data2, t);
     }
@@ -254,10 +254,11 @@ main(int argc, char** argv)
     }
 
     // Create Gnuplot object
-    Gnuplot plot("hidden_node_problem_throughput.plt");
+    Gnuplot plot("hidden_node_problem_throughput.svg");
     plot.SetTitle("Throughput: With and Without IRS");
     plot.SetLegend("Time (s)", "Throughput (Mbps)");
     plot.SetExtra("set key right center box 3");
+    plot.SetTerminal("svg");
 
     // Create datasets
     Gnuplot2dDataset dataNoIrs1, dataNoIrs2, dataIrs1, dataIrs2;
