@@ -155,6 +155,7 @@ class IrsPropagationLossModel : public PropagationLossModel
     Ptr<PropagationLossModel> m_lossModel;
     double m_frequency;
     double m_lambda;
+    Ptr<NormalRandomVariable> m_rng;
 
     friend class ::IrsPropagationLossModelTestCase;
     friend class ::IrsPropagationLossModelHelperFunctionsTestCase;

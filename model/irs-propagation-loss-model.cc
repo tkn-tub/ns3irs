@@ -79,10 +79,16 @@ IrsPropagationLossModel::GetTypeId()
 IrsPropagationLossModel::IrsPropagationLossModel()
     : PropagationLossModel()
 {
+    m_rng = CreateObject<NormalRandomVariable>();
+    m_rng->SetAttribute("Mean", DoubleValue(0.0));
+    m_rng->SetAttribute("Variance", DoubleValue(0.1));
 }
 
 IrsPropagationLossModel::~IrsPropagationLossModel()
 {
+    m_rng = CreateObject<NormalRandomVariable>();
+    m_rng->SetAttribute("Mean", DoubleValue(0.0));
+    m_rng->SetAttribute("Variance", DoubleValue(0.1));
 }
 
 void
@@ -277,10 +283,7 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
 
         // add random variable to account for small-scale fading or measurement noise
         // Normal Distribution (0, 0.1)
-        Ptr<NormalRandomVariable> rng = CreateObject<NormalRandomVariable>();
-        rng->SetAttribute("Mean", DoubleValue(0.0));
-        rng->SetAttribute("Variance", DoubleValue(0.1));
-        pl_irs += rng->GetValue();
+        pl_irs += m_rng->GetValue();
 
         NS_LOG_DEBUG("PL with IRS Gain (dBm): " << pl_irs);
         // pathloss irs to rx
