@@ -200,7 +200,7 @@ RunSimulation(bool useIRS,
     Simulator::Stop(Seconds(simTime));
 
     // Schedule throughput calculation
-    for (double t = 1.0; t <= simTime; t += 0.5)
+    for (double t = 1.0; t <= simTime; t += 0.05)
     {
         Simulator::Schedule(Seconds(t), &CalculateThroughput, monitor, &data1, &data2, t);
     }
