@@ -22,6 +22,7 @@
 #include "ns3/irs-helper.h"
 #include "ns3/irs-propagation-loss-model.h"
 #include "ns3/log.h"
+#include "ns3/rng-seed-manager.h"
 #include "ns3/simulator.h"
 #include "ns3/test.h"
 
@@ -102,6 +103,8 @@ main(int argc, char* argv[])
     double frequency = 5.21e9;
     double txPowerDbm = 17;
 
+    RngSeedManager::SetSeed(2024);
+
     NodeContainer irsNode;
     irsNode.Create(1);
 
@@ -123,7 +126,8 @@ main(int argc, char* argv[])
     for (double pos_irs = 0; pos_irs <= 15; pos_irs += 0.5)
     {
         irs->SetPosition(Vector(pos_irs, -1, 0));
-        irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/changeRisPos/" + irs_lookup_table[i]);
+        irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/changeRisPos/" +
+                                 irs_lookup_table[i]);
         irsHelper.Install(irsNode);
 
         Ptr<IrsPropagationLossModel> lossModel = CreateObject<IrsPropagationLossModel>();
