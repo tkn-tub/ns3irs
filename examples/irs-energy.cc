@@ -21,6 +21,7 @@
 #include "ns3/command-line.h"
 #include "ns3/config.h"
 #include "ns3/double.h"
+#include "ns3/energy-module.h"
 #include "ns3/internet-stack-helper.h"
 #include "ns3/ipv4-address-helper.h"
 #include "ns3/irs-helper.h"
@@ -38,10 +39,9 @@
 #include "ns3/ssid.h"
 #include "ns3/string.h"
 #include "ns3/uinteger.h"
+#include "ns3/wifi-radio-energy-model-helper.h"
 #include "ns3/yans-wifi-channel.h"
 #include "ns3/yans-wifi-helper.h"
-#include "ns3/energy-module.h"
-#include "ns3/wifi-radio-energy-model-helper.h"
 
 #include <cstdint>
 #include <iomanip>
@@ -217,15 +217,33 @@ RunScenario(std::string scenario,
 
         Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
         irsLossModel->SetFrequency(5.21e9);
-        wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
-                                       "IrsNodes",
-                                       PointerValue(&irsNode),
-                                       "LossModel",
-                                       PointerValue(irsLossModel),
-                                       "Frequency",
-                                       DoubleValue(5.21e9));
+
+        if (scenario == "IRS Constructive" || scenario == "IRS Destructive")
+        {
+            Ptr<LogDistancePropagationLossModel> losLossModel =
+                CreateObject<LogDistancePropagationLossModel>();
+            wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
+                                           "IrsNodes",
+                                           PointerValue(&irsNode),
+                                           "IrsLossModel",
+                                           PointerValue(irsLossModel),
+                                           "LosLossModel",
+                                           PointerValue(losLossModel),
+                                           "Frequency",
+                                           DoubleValue(5.21e9));
+        }
+        else
+        {
+            wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
+                                           "IrsNodes",
+                                           PointerValue(&irsNode),
+                                           "IrsLossModel",
+                                           PointerValue(irsLossModel),
+                                           "Frequency",
+                                           DoubleValue(5.21e9));
+        }
     }
-    if (scenario != "IRS")
+    if (scenario == "LOS")
     {
         wifiChannel.AddPropagationLoss("ns3::LogDistancePropagationLossModel");
     }

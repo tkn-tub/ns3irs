@@ -133,10 +133,10 @@ RunSimulation(bool useIRS,
 
         Ptr<IrsPropagationLossModel> irsLossModel = CreateObject<IrsPropagationLossModel>();
         irsLossModel->SetIrsNodes(&irsNode);
-        irsLossModel->SetPropagationModel(irsModel);
+        irsLossModel->SetIrsPropagationModel(irsModel);
+        irsLossModel->SetLosPropagationModel(lossModel);
         irsLossModel->SetFrequency(5.18e9);
 
-        irsLossModel->SetNext(lossModel);
         wifiChannel->SetPropagationLossModel(irsLossModel);
     }
     else

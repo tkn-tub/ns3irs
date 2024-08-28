@@ -133,14 +133,14 @@ main(int argc, char* argv[])
         Ptr<IrsPropagationLossModel> lossModel = CreateObject<IrsPropagationLossModel>();
         lossModel->SetFrequency(frequency);
         lossModel->SetIrsNodes(&irsNode);
-        lossModel->SetPropagationModel(irsLossModel);
+        lossModel->SetIrsPropagationModel(irsLossModel);
 
         SimulationResult result;
 
         result.irs_x = pos_irs;
         result.only_irs = lossModel->CalcRxPower(txPowerDbm, a, b);
 
-        lossModel->SetNext(irsLossModel);
+        lossModel->SetLosPropagationModel(irsLossModel);
         result.irs_los = lossModel->CalcRxPower(txPowerDbm, a, b);
         simulationResults.push_back(result);
 

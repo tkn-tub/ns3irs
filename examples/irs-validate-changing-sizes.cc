@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2024 Jakob Rühlow
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "ns3/core-module.h"
 #include "ns3/interference-helper.h"
 #include "ns3/internet-stack-helper.h"
@@ -118,17 +135,25 @@ RunSimulation(std::string lookupTable, bool useRisOnly, double ueDistance)
 
     Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
     irsLossModel->SetFrequency(5.21e9);
-    wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
-                                   "IrsNodes",
-                                   PointerValue(&irs),
-                                   "LossModel",
-                                   PointerValue(irsLossModel),
-                                   "Frequency",
-                                   DoubleValue(5.21e9));
-
-    if (!useRisOnly)
+    if (useRisOnly)
     {
-        wifiChannel.AddPropagationLoss("ns3::FriisPropagationLossModel",
+        wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
+                                       "IrsNodes",
+                                       PointerValue(&irs),
+                                       "IrsLossModel",
+                                       PointerValue(irsLossModel),
+                                       "Frequency",
+                                       DoubleValue(5.21e9));
+    }
+    else
+    {
+        wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
+                                       "IrsNodes",
+                                       PointerValue(&irs),
+                                       "IrsLossModel",
+                                       PointerValue(irsLossModel),
+                                       "LosLossModel",
+                                       PointerValue(irsLossModel),
                                        "Frequency",
                                        DoubleValue(5.21e9));
     }
@@ -208,7 +233,8 @@ RunSimulation(std::string lookupTable, bool useRisOnly, double ueDistance)
     Simulator::Destroy();
 }
 
-void writeResultsToCSV(const std::string& filename, std::vector<std::string> lookupTables)
+void
+writeResultsToCSV(const std::string& filename, std::vector<std::string> lookupTables)
 {
     std::ofstream file(filename);
     if (!file.is_open())
@@ -233,8 +259,8 @@ void writeResultsToCSV(const std::string& filename, std::vector<std::string> loo
         {
             std::string risKey = lookupTable + "_ris";
             std::string risLosKey = lookupTable + "_ris_los";
-            file << "," << (result.rxPower.count(risKey) ? result.rxPower.at(risKey) : 0)
-                 << "," << (result.rxPower.count(risLosKey) ? result.rxPower.at(risLosKey) : 0);
+            file << "," << (result.rxPower.count(risKey) ? result.rxPower.at(risKey) : 0) << ","
+                 << (result.rxPower.count(risLosKey) ? result.rxPower.at(risLosKey) : 0);
         }
         file << "\n";
     }

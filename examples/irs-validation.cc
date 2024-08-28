@@ -205,7 +205,11 @@ RunScenario(std::string scenario,
 
     wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
 
-    if (scenario != "LOS")
+    if (scenario == "LOS")
+    {
+        wifiChannel.AddPropagationLoss("ns3::LogDistancePropagationLossModel");
+    }
+    else
     {
         IrsHelper irsHelper;
         irsHelper.SetDirection(Vector(0, 1, 0));
@@ -214,17 +218,31 @@ RunScenario(std::string scenario,
 
         Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
         irsLossModel->SetFrequency(5.21e9);
-        wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
-                                       "IrsNodes",
-                                       PointerValue(&irsNode),
-                                       "LossModel",
-                                       PointerValue(irsLossModel),
-                                       "Frequency",
-                                       DoubleValue(5.21e9));
-    }
-    if (scenario != "IRS")
-    {
-        wifiChannel.AddPropagationLoss("ns3::LogDistancePropagationLossModel");
+
+        if (scenario == "IRS Constructive" || scenario == "IRS Destructive")
+        {
+            Ptr<LogDistancePropagationLossModel> losLossModel =
+                CreateObject<LogDistancePropagationLossModel>();
+            wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
+                                           "IrsNodes",
+                                           PointerValue(&irsNode),
+                                           "IrsLossModel",
+                                           PointerValue(irsLossModel),
+                                           "LosLossModel",
+                                           PointerValue(losLossModel),
+                                           "Frequency",
+                                           DoubleValue(5.21e9));
+        }
+        else
+        {
+            wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
+                                           "IrsNodes",
+                                           PointerValue(&irsNode),
+                                           "IrsLossModel",
+                                           PointerValue(irsLossModel),
+                                           "Frequency",
+                                           DoubleValue(5.21e9));
+        }
     }
 
     wifiPhy.SetChannel(wifiChannel.Create());
@@ -351,31 +369,34 @@ main(int argc, char* argv[])
     {
         // Scenario 2: IRS Constructive
         Vector irs(1.35, -1.35, 0);
-        RunScenario("IRS",
-                    wifiManager,
-                    runNumber,
-                    irs,
-                    "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv");
+        RunScenario(
+            "IRS",
+            wifiManager,
+            runNumber,
+            irs,
+            "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv");
     }
     else if (scenario == "IrsConstructive")
     {
         // Scenario 3: IRS Constructive
         Vector irs(1.35, -1.35, 0);
-        RunScenario("IRS Constructive",
-                    wifiManager,
-                    runNumber,
-                    irs,
-                    "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv");
+        RunScenario(
+            "IRS Constructive",
+            wifiManager,
+            runNumber,
+            irs,
+            "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv");
     }
     else if (scenario == "IrsDestructive")
     {
         // // Scenario 4: IRS Destructive
         Vector irs(20.5186, -7.6093, 0);
-        RunScenario("IRS Destructive",
-                    wifiManager,
-                    runNumber,
-                    irs,
-                    "contrib/irs/examples/lookuptables/IRS_400_IN110_OUT69_FREQ5.21GHz_destructive.csv");
+        RunScenario(
+            "IRS Destructive",
+            wifiManager,
+            runNumber,
+            irs,
+            "contrib/irs/examples/lookuptables/IRS_400_IN110_OUT69_FREQ5.21GHz_destructive.csv");
     }
     return 0;
 }

@@ -152,7 +152,7 @@ IrsPropagationLossModelTestCase::DoRun()
     Ptr<IrsPropagationLossModel> lossModel = CreateObject<IrsPropagationLossModel>();
     lossModel->SetFrequency(frequency);
     lossModel->SetIrsNodes(&irsNode);
-    lossModel->SetPropagationModel(irsLossModel);
+    lossModel->SetIrsPropagationModel(irsLossModel);
 
     /*
     The path loss for a IRS scenario in the far field case is given in:

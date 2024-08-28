@@ -22,7 +22,6 @@ build_lib(
                  model/irs-propagation-loss-model.h
     LIBRARIES_TO_LINK
         ${libpropagation}
-    TEST_SOURCES test/irs-test-suite.cc
-                 test/irs-propagation-loss-model-test-suite.cc
+    TEST_SOURCES test/irs-propagation-loss-model-test-suite.cc
                  ${examples_as_tests_sources}
 )
