@@ -26,6 +26,7 @@
 #include "ns3/propagation-loss-model.h"
 #include "ns3/vector.h"
 
+// friend classes to test private fuctions
 class IrsPropagationLossModelTestCase;
 class IrsPropagationLossModelHelperFunctionsTestCase;
 
@@ -48,9 +49,6 @@ class IrsPropagationLossModel : public PropagationLossModel
     IrsPropagationLossModel(const IrsPropagationLossModel&) = delete;
     IrsPropagationLossModel& operator=(const IrsPropagationLossModel&) = delete;
 
-    double CalcRxPower(double txPowerDbm,
-                       Ptr<MobilityModel> a,
-                       Ptr<MobilityModel> b) const override;
     /**
      * \param frequency (Hz)
      *
@@ -81,12 +79,24 @@ class IrsPropagationLossModel : public PropagationLossModel
      *
      * \param model PropagationLossModel
      */
-    void SetPropagationModel(Ptr<PropagationLossModel> model);
+    void SetIrsPropagationModel(Ptr<PropagationLossModel> model);
 
     /**
      * \return the propagation model
      */
-    Ptr<PropagationLossModel> GetPropagatioModel() const;
+    Ptr<PropagationLossModel> GetIrsPropagatioModel() const;
+
+    /**
+     * Set the PropagationLossModel for the line-of-sight
+     *
+     * \param model PropagationLossModel
+     */
+    void SetLosPropagationModel(Ptr<PropagationLossModel> model);
+
+    /**
+     * \return the propagation model for the line-of-sight
+     */
+    Ptr<PropagationLossModel> GetLosPropagatioModel() const;
 
   private:
     /**
@@ -102,20 +112,6 @@ class IrsPropagationLossModel : public PropagationLossModel
      * \return the Dbm
      */
     double DbmFromW(double w) const;
-
-    /**
-     * Calculates the angle in degrees between the vector from point B to point A
-     * (`AB`) and the IRS normal vector (`N`). Also determines whether points A and B are on
-     * opposite sides of the IRS, given the position of the IRS.
-     *
-     * \param A Position of A.
-     * \param B Position of B.
-     * \param N Normal vector of the IRS.
-     * \param IrsPos Position of the IRS.
-     *
-     * \return The angles in degrees between the vector AB and the IRS normal vector.
-     * If A and B are on opposite sides of the IRS it returns {-1, -1}.
-     */
 
     /**
      * Computes the angle of incidence and the angle of reflection for the vectors
@@ -152,11 +148,13 @@ class IrsPropagationLossModel : public PropagationLossModel
     int64_t DoAssignStreams(int64_t stream) override;
 
     Ptr<NodeContainer> m_irsNodes;
-    Ptr<PropagationLossModel> m_lossModel;
+    Ptr<PropagationLossModel> m_irsLossModel;
+    Ptr<PropagationLossModel> m_losLossModel;
+    Ptr<NormalRandomVariable> m_rng;
     double m_frequency;
     double m_lambda;
-    Ptr<NormalRandomVariable> m_rng;
 
+    // friend classes to test private functions
     friend class ::IrsPropagationLossModelTestCase;
     friend class ::IrsPropagationLossModelHelperFunctionsTestCase;
 };

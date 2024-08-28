@@ -40,7 +40,6 @@ class Irs : public Object
      */
     static TypeId GetTypeId();
     Irs();
-    ~Irs() override;
 
     IrsEntry GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const;
 

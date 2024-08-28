@@ -53,10 +53,6 @@ Irs::Irs()
 {
 }
 
-Irs::~Irs()
-{
-}
-
 IrsEntry
 Irs::GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const
 {

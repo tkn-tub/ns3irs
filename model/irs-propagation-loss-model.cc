@@ -61,10 +61,15 @@ IrsPropagationLossModel::GetTypeId()
                           PointerValue(),
                           MakePointerAccessor(&IrsPropagationLossModel::m_irsNodes),
                           MakePointerChecker<NodeContainer>())
-            .AddAttribute("LossModel",
-                          "The propagation loss model.",
+            .AddAttribute("IrsLossModel",
+                          "The propagation loss model for the path over the IRS.",
                           PointerValue(),
-                          MakePointerAccessor(&IrsPropagationLossModel::m_lossModel),
+                          MakePointerAccessor(&IrsPropagationLossModel::m_irsLossModel),
+                          MakePointerChecker<PropagationLossModel>())
+            .AddAttribute("LosLossModel",
+                          "The propagation loss model for the line-of-sight path.",
+                          PointerValue(),
+                          MakePointerAccessor(&IrsPropagationLossModel::m_losLossModel),
                           MakePointerChecker<PropagationLossModel>())
             .AddAttribute(
                 "Frequency",
@@ -86,15 +91,13 @@ IrsPropagationLossModel::IrsPropagationLossModel()
 
 IrsPropagationLossModel::~IrsPropagationLossModel()
 {
-    m_rng = CreateObject<NormalRandomVariable>();
-    m_rng->SetAttribute("Mean", DoubleValue(0.0));
-    m_rng->SetAttribute("Variance", DoubleValue(0.1));
 }
 
+// from FriisPropagationLossModel
 void
 IrsPropagationLossModel::SetFrequency(double frequency)
 {
-    NS_ABORT_MSG_UNLESS(frequency > 0, "Frequency should be greater zero (in Hz).");
+    NS_ASSERT_MSG(frequency > 0, "Frequency should be greater zero (in Hz)");
     m_frequency = frequency;
     static const double c = 299792458.0; // speed of light in vacuum
     m_lambda = c / frequency;
@@ -109,7 +112,8 @@ IrsPropagationLossModel::GetFrequency() const
 void
 IrsPropagationLossModel::SetIrsNodes(Ptr<NodeContainer> nodes)
 {
-    NS_ABORT_MSG_UNLESS(nodes->GetN() > 0, "The IRS NodeContainer must contain at least one node.");
+    NS_ASSERT_MSG(m_irsNodes && m_irsNodes->GetN() > 0,
+                  "IRS nodes are not set or the container is empty");
     m_irsNodes = nodes;
 }
 
@@ -120,18 +124,32 @@ IrsPropagationLossModel::GetIrsNodes() const
 }
 
 void
-IrsPropagationLossModel::SetPropagationModel(Ptr<PropagationLossModel> model)
+IrsPropagationLossModel::SetIrsPropagationModel(Ptr<PropagationLossModel> model)
 {
-    m_lossModel = model;
+    NS_ASSERT_MSG(model, "Cannot set a null propagation model");
+    m_irsLossModel = model;
 }
 
 Ptr<PropagationLossModel>
-IrsPropagationLossModel::GetPropagatioModel() const
+IrsPropagationLossModel::GetIrsPropagatioModel() const
 {
-    return m_lossModel;
+    return m_irsLossModel;
 }
 
-// copied from FriisPropagationLossModel
+void
+IrsPropagationLossModel::SetLosPropagationModel(Ptr<PropagationLossModel> model)
+{
+    NS_ASSERT_MSG(model, "Cannot set a null propagation model");
+    m_losLossModel = model;
+}
+
+Ptr<PropagationLossModel>
+IrsPropagationLossModel::GetLosPropagatioModel() const
+{
+    return m_losLossModel;
+}
+
+// from FriisPropagationLossModel
 double
 IrsPropagationLossModel::DbmToW(double dbm) const
 {
@@ -139,7 +157,7 @@ IrsPropagationLossModel::DbmToW(double dbm) const
     return mw / 1000.0;
 }
 
-// copied from FriisPropagationLossModel
+// from FriisPropagationLossModel
 double
 IrsPropagationLossModel::DbmFromW(double w) const
 {
@@ -208,12 +226,17 @@ IrsPropagationLossModel::WrapToPi(double angle) const
 }
 
 double
-IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
-                                     Ptr<ns3::MobilityModel> a,
-                                     Ptr<ns3::MobilityModel> b) const
+IrsPropagationLossModel::DoCalcRxPower(double txPowerDbm,
+                                       Ptr<ns3::MobilityModel> a,
+                                       Ptr<ns3::MobilityModel> b) const
 {
+    NS_ASSERT_MSG(m_irsLossModel, "IRS path loss model is not set");
+
     // complex envelope of recieved signal
     std::complex<double> r(0.0, 0.0);
+    NS_LOG_DEBUG("--------- IRS Propagation Loss Model Debug Info ---------\n"
+                 << "m_frequency (Hz): " << m_frequency << "\n"
+                 << "TX Power (dBm): " << txPowerDbm);
 
 #ifdef NS3_BUILD_PROFILE_DEBUG
     // get current frequency - only possible when WifiNetDevice is used
@@ -233,10 +256,6 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
         }
     }
 #endif
-
-    NS_LOG_DEBUG("--------- IRS Propagation Loss Model Debug Info ---------\n"
-                 << "m_frequency (Hz): " << m_frequency << "\n"
-                 << "TX Power (dBm): " << txPowerDbm);
 
     for (auto irsNode = m_irsNodes->Begin(); irsNode != m_irsNodes->End(); irsNode++)
     {
@@ -275,7 +294,8 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
                    node->GetObject<MobilityModel>()->GetDistanceFrom(b);
 
         // pathloss tx to irs
-        double pl_irs = m_lossModel->CalcRxPower(txPowerDbm, a, node->GetObject<MobilityModel>());
+        double pl_irs =
+            m_irsLossModel->CalcRxPower(txPowerDbm, a, node->GetObject<MobilityModel>());
         NS_LOG_DEBUG("PL TX to IRS (dBm): " << pl_irs);
 
         // gain of irs
@@ -287,7 +307,7 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
 
         NS_LOG_DEBUG("PL with IRS Gain (dBm): " << pl_irs);
         // pathloss irs to rx
-        pl_irs = m_lossModel->CalcRxPower(pl_irs, node->GetObject<MobilityModel>(), b);
+        pl_irs = m_irsLossModel->CalcRxPower(pl_irs, node->GetObject<MobilityModel>(), b);
 
         // calculate phase of irs path
         double theta = (2 * M_PI * d) / m_lambda;
@@ -308,11 +328,10 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
         r += std::sqrt(DbmToW(pl_irs)) * std::exp(phase_irs);
     }
 
-    Ptr<PropagationLossModel> next = GetNext();
-    if (next)
+    if (m_losLossModel)
     {
         // calculate amplitude
-        double pl_other = next->CalcRxPower(txPowerDbm, a, b);
+        double pl_other = m_losLossModel->CalcRxPower(txPowerDbm, a, b);
 
         // calculate phase
         double theta = (2 * M_PI * a->GetDistanceFrom(b)) / m_lambda;
@@ -335,14 +354,6 @@ IrsPropagationLossModel::CalcRxPower(double txPowerDbm,
     NS_LOG_DEBUG("Resulting RX Power (dBm): " << rxPower);
 
     return rxPower;
-}
-
-double
-IrsPropagationLossModel::DoCalcRxPower(double txPowerDbm,
-                                       Ptr<MobilityModel> a,
-                                       Ptr<MobilityModel> b) const
-{
-    return 0.0;
 }
 
 int64_t
