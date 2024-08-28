@@ -84,19 +84,44 @@ for i = 1:length(x_ris_range)
     los_array(i) = RXpowerLos;
 
 end
-% Plot the results
-figure;
+% % Plot the results
+% figure;
+% 
+% hold on;
+% plot(x_ris_range, ris_array-noise, 'r', 'LineWidth', 2.5);
+% plot(x_ris_range, los_array-noise, 'k--', 'LineWidth', 2.5);
+% plot(x_ris_range, onlyris_array-noise, 'b', 'LineWidth', 2.5);
+% plot(x_ris_range, ris_etsi_array-noise, 'c--', 'LineWidth', 2.5);
+% plot(optimalrisplacementns3.ris_x, optimalrisplacementns3.only_irs-noise, 'm-o', 'LineWidth', 2.5, 'MarkerSize', 8);
+% plot(optimalrisplacementns3.ris_x, optimalrisplacementns3.irs_los-noise, 'g-o', 'LineWidth', 2.5, 'MarkerSize', 8);
+% 
+% % Increase font size for labels and title
+% xlabel('x pos [m]', 'FontSize', 20, 'FontWeight', 'bold');
+% ylabel('SNR [dBm]', 'FontSize', 20, 'FontWeight', 'bold');
+% title(sprintf('SNR vs. Position of RIS for N = %d (%d x %d)', Nr*Nc, Nr, Nc), 'FontSize', 22, 'FontWeight', 'bold');
+% 
+% % Enhance legend and grid
+% legend('RIS + LOS', 'LOS', 'RIS', 'RIS ETSI', 'RIS (Ns3)', 'RIS + LOS (Ns3)', 'FontSize', 22, 'Location', 'Best');
+% grid on;
+% 
+% % Improve overall figure appearance
+% set(gca, 'LineWidth', 1.5, 'FontSize', 18);
+% set(gcf, 'Color', 'w');
 
-hold on;
-plot(x_ris_range, ris_array-noise, 'r', 'LineWidth', 2);
-plot(x_ris_range, los_array-noise, 'g--', 'LineWidth', 2);
-plot(x_ris_range, onlyris_array-noise, 'b', 'LineWidth', 2);
-plot(x_ris_range, ris_etsi_array-noise, 'c--', 'LineWidth', 2);
-plot(optimalrisplacementns3.ris_x, optimalrisplacementns3.only_irs-noise, 'm--', 'LineWidth', 2);
-plot(optimalrisplacementns3.ris_x, optimalrisplacementns3.irs_los-noise, 'y--', 'LineWidth', 2);
+% Ensure all arrays are column vectors
+x_ris_range = x_ris_range(:);
+ris_array = ris_array(:);
+los_array = los_array(:);
+onlyris_array = onlyris_array(:);
+ris_etsi_array = ris_etsi_array(:);
+optimalrisplacementns3.ris_x = optimalrisplacementns3.ris_x(:);
+optimalrisplacementns3.only_irs = optimalrisplacementns3.only_irs(:);
+optimalrisplacementns3.irs_los = optimalrisplacementns3.irs_los(:);
 
-xlabel('x pos [m]');
-ylabel('SNR [dBm]');
-title(sprintf('Rx Power vs. Position of RIS for N = %d (%d x %d)', Nr*Nc, Nr, Nc));
-legend('RIS + LOS', 'LOS', 'RIS', 'RIS ETSI', 'RIS (Ns3)', 'RIS + LOS (Ns3)');
-grid on;
+
+% Combine all relevant data into a matrix
+data = [x_ris_range, ris_array - noise, los_array - noise, onlyris_array - noise, ris_etsi_array - noise, ...
+        optimalrisplacementns3.ris_x, optimalrisplacementns3.only_irs - noise, optimalrisplacementns3.irs_los - noise];
+
+% Write the data to a CSV file or a text file
+csvwrite('plot_data.csv', data);
