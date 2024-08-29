@@ -58,68 +58,94 @@ NS_LOG_COMPONENT_DEFINE("IrsValidation");
 class ScenarioStatistics
 {
   public:
-    ScenarioStatistics(std::string scenarioName);
-    void RxCallback(std::string path, Ptr<const Packet> packet, const Address& from);
-    double GetThroughput();
-    std::string GetScenarioName();
+    ScenarioStatistics(std::string scenarioName, double interval = 1.0);
+    double GetThroughput() const;
+    std::string GetScenarioName() const;
     double GetDataRate() const;
     double GetSNR() const;
     double GetSuccessRate() const;
     uint32_t GetTotalRxPackets() const;
     uint32_t GetTotalTxPackets() const;
     void RateCallback(std::string path, uint64_t oldRate, uint64_t newRate);
-    void SNRCallback(std::string context,
-                     Ptr<const Packet> p,
-                     uint16_t channelFreqMhz,
-                     WifiTxVector txVector,
-                     MpduInfo aMpdu,
-                     SignalNoiseDbm signalNoise,
-                     uint16_t staId);
+    void RxCallback(std::string context,
+                    Ptr<const Packet> p,
+                    uint16_t channelFreqMhz,
+                    WifiTxVector txVector,
+                    MpduInfo aMpdu,
+                    SignalNoiseDbm signalNoise,
+                    uint16_t staId);
     void TxCallback(std::string context,
                     const Ptr<const Packet> packet,
                     uint16_t channelFreqMhz,
                     WifiTxVector txVector,
                     MpduInfo aMpdu,
                     uint16_t staId);
+    void SetEnergySources(Ptr<EnergySource> apSource, Ptr<EnergySource> staSource);
+    void PeriodicUpdate();
+    void SaveDataPoint();
 
   private:
     std::string m_scenarioName;
     uint64_t m_bytesTotal;
     double m_throughput;
     double m_dataRate;
-    uint32_t m_rxpackets;
-    uint32_t m_txpackets;
+    uint64_t m_rxpackets;
+    uint64_t m_txpackets;
     uint64_t m_snrSum;
+    Ptr<EnergySource> m_apEnergySource;
+    Ptr<EnergySource> m_staEnergySource;
+    std::ofstream m_outputFile;
+    double m_interval;
+    Time m_startTime;
 };
 
-ScenarioStatistics::ScenarioStatistics(std::string scenarioName)
+ScenarioStatistics::ScenarioStatistics(std::string scenarioName, double interval)
     : m_scenarioName(scenarioName),
       m_bytesTotal(0),
-      m_throughput(0),
       m_dataRate(0),
       m_rxpackets(0),
       m_txpackets(0),
-      m_snrSum(0)
+      m_snrSum(0),
+      m_interval(interval),
+      m_startTime(Simulator::Now())
 {
+    std::string filename = "/scratch/ruehlow/" + scenarioName + "_data.csv";
+    m_outputFile.open(filename.c_str(), std::ios::out | std::ios::trunc);
+    m_outputFile << "Time,Throughput,DataRate,SNR,SuccessRate,APEnergyLevel,STAEnergyLevel,"
+                    "TotalTxPackets,TotalRxPackets"
+                 << std::endl;
+
+    Simulator::Schedule(Seconds(m_interval), &ScenarioStatistics::PeriodicUpdate, this);
 }
 
 void
-ScenarioStatistics::RxCallback(std::string path, Ptr<const Packet> packet, const Address& from)
+ScenarioStatistics::SetEnergySources(Ptr<EnergySource> apSource, Ptr<EnergySource> staSource)
 {
-    m_bytesTotal += packet->GetSize();
+    m_apEnergySource = apSource;
+    m_staEnergySource = staSource;
 }
 
-double
-ScenarioStatistics::GetThroughput()
+void
+ScenarioStatistics::SaveDataPoint()
 {
-    m_throughput = (m_bytesTotal * 8.0) / (1e6 * 60 * 60); // Mbps over 10 seconds
-    return m_throughput;
+    double time = Simulator::Now().GetSeconds();
+    double throughput = GetThroughput();
+    double dataRate = GetDataRate();
+    double snr = GetSNR();
+    double successRate = GetSuccessRate();
+    double apEnergyLevel = m_apEnergySource ? m_apEnergySource->GetRemainingEnergy() : 0.0;
+    double staEnergyLevel = m_staEnergySource ? m_staEnergySource->GetRemainingEnergy() : 0.0;
+
+    m_outputFile << std::fixed << std::setprecision(4) << time << "," << throughput << ","
+                 << dataRate << "," << snr << "," << successRate << "," << apEnergyLevel << ","
+                 << staEnergyLevel << "," << m_txpackets << "," << m_rxpackets << std::endl;
 }
 
-std::string
-ScenarioStatistics::GetScenarioName()
+void
+ScenarioStatistics::PeriodicUpdate()
 {
-    return m_scenarioName;
+    SaveDataPoint();
+    Simulator::Schedule(Seconds(m_interval), &ScenarioStatistics::PeriodicUpdate, this);
 }
 
 double
@@ -132,6 +158,18 @@ double
 ScenarioStatistics::GetSuccessRate() const
 {
     return (m_txpackets == 0) ? 0.0 : ((double)m_rxpackets / (double)m_txpackets) * 100.0;
+}
+
+double
+ScenarioStatistics::GetThroughput() const
+{
+    Time now = Simulator::Now();
+    double totalTime = (now - m_startTime).GetSeconds();
+    if (totalTime > 0)
+    {
+        return (m_bytesTotal * 8.0) / (totalTime * 1e6); // Mbps
+    }
+    return 0.0;
 }
 
 uint32_t
@@ -161,15 +199,16 @@ ScenarioStatistics::RateCallback(std::string path, uint64_t oldRate, uint64_t ne
 }
 
 void
-ScenarioStatistics::SNRCallback(std::string context,
-                                Ptr<const Packet> p,
-                                uint16_t channelFreqMhz,
-                                WifiTxVector txVector,
-                                MpduInfo aMpdu,
-                                SignalNoiseDbm signalNoise,
-                                uint16_t staId)
+ScenarioStatistics::RxCallback(std::string context,
+                               Ptr<const Packet> p,
+                               uint16_t channelFreqMhz,
+                               WifiTxVector txVector,
+                               MpduInfo aMpdu,
+                               SignalNoiseDbm signalNoise,
+                               uint16_t staId)
 {
     m_snrSum += signalNoise.signal - signalNoise.noise;
+    m_bytesTotal += p->GetSize();
     m_rxpackets++;
 }
 
@@ -218,7 +257,7 @@ RunScenario(std::string scenario,
         Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
         irsLossModel->SetFrequency(5.21e9);
 
-        if (scenario == "IRS Constructive" || scenario == "IRS Destructive")
+        if (scenario == "IRS+LOS")
         {
             Ptr<LogDistancePropagationLossModel> losLossModel =
                 CreateObject<LogDistancePropagationLossModel>();
@@ -296,13 +335,7 @@ RunScenario(std::string scenario,
     // Energy consumption quantities have been exaggerated for
     // demonstration purposes, real consumption values are much smaller.
     WifiRadioEnergyModelHelper radioEnergyHelper;
-    // radioEnergyHelper.Set("TxCurrentA", DoubleValue(0.25));
-    // radioEnergyHelper.Set("RxCurrentA", DoubleValue(0.06));
-    // radioEnergyHelper.Set("IdleCurrentA", DoubleValue(0.025));
 
-    radioEnergyHelper.Set("TxCurrentA", DoubleValue(4.66));
-    radioEnergyHelper.Set("RxCurrentA", DoubleValue(0.466));
-    radioEnergyHelper.Set("IdleCurrentA", DoubleValue(0.466));
     DeviceEnergyModelContainer deviceModelsAp =
         radioEnergyHelper.Install(apDevice, energySourceContainerAp);
 
@@ -325,21 +358,18 @@ RunScenario(std::string scenario,
     ApplicationContainer sinkApp = sink.Install(wifiStaNode.Get(0));
 
     OnOffHelper onoff("ns3::UdpSocketFactory", InetSocketAddress(interfaces.GetAddress(1), port));
-    onoff.SetConstantRate(DataRate("400Mbps"), 1200);
+    onoff.SetConstantRate(DataRate("15Mbps"), 1200);
     ApplicationContainer sourceApp = onoff.Install(wifiApNode.Get(0));
 
-    sinkApp.Start(Seconds(0));
-    sourceApp.Start(Seconds(1));
+    sinkApp.Start(Seconds(0.5));
+    sourceApp.Start(Seconds(1.0));
 
     // Statistics
-    ScenarioStatistics stats(scenario);
-    // STA: total recieved bytes
-    Config::Connect("/NodeList/1/ApplicationList/*/$ns3::PacketSink/Rx",
-                    MakeCallback(&ScenarioStatistics::RxCallback, &stats));
+    ScenarioStatistics stats(scenario, 10.0);
     // STA: mean SNR + count recieved packages at phy level
     Config::Connect(
         "/NodeList/1/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::WifiPhy/MonitorSnifferRx",
-        MakeCallback(&ScenarioStatistics::SNRCallback, &stats));
+        MakeCallback(&ScenarioStatistics::RxCallback, &stats));
     // AP: DataRate
     Config::Connect("/NodeList/0/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/$" +
                         wifiManager + "/Rate",
@@ -349,18 +379,15 @@ RunScenario(std::string scenario,
         "/NodeList/0/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::WifiPhy/MonitorSnifferTx",
         MakeCallback(&ScenarioStatistics::TxCallback, &stats));
 
+    // Set energy sources
+    stats.SetEnergySources(DynamicCast<EnergySource>(energySourceContainerAp.Get(0)),
+                           DynamicCast<EnergySource>(energySourceContainerSta.Get(0)));
+
     // Run simulation
-    Simulator::Stop(Minutes(60));
+    Simulator::Stop(Hours(3));
     Simulator::Run();
 
-    std::cout << std::fixed << std::setprecision(4) << "Scenario: " << stats.GetScenarioName()
-              << ", Throughput: " << stats.GetThroughput() << " Mbps" << ", SNR: " << stats.GetSNR()
-              << " dBm" << ", Data Rate: " << stats.GetDataRate() << " Mbps"
-              << ", Success Rate:" << stats.GetSuccessRate()
-              << "%, Transmitted Packets:" << stats.GetTotalTxPackets()
-              << ", Recieved Packets:" << stats.GetTotalRxPackets()
-              << ", Battery Charge Ap: " << batteryAp->GetStateOfCharge()
-              << "%, Battery Charge Sta: " << batterySta->GetStateOfCharge() << "%" << std::endl;
+    stats.SaveDataPoint();
 
     Simulator::Destroy();
 }
@@ -410,27 +437,16 @@ main(int argc, char* argv[])
             irs,
             "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv");
     }
-    else if (scenario == "IrsConstructive")
+    else if (scenario == "IRS+LOS")
     {
         // Scenario 3: IRS Constructive
         Vector irs(1.35, -1.35, 0);
         RunScenario(
-            "IRS Constructive",
+            "IRS+LOS",
             wifiManager,
             runNumber,
             irs,
             "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv");
-    }
-    else if (scenario == "IrsDestructive")
-    {
-        // // Scenario 4: IRS Destructive
-        Vector irs(20.5186, -7.6093, 0);
-        RunScenario(
-            "IRS Destructive",
-            wifiManager,
-            runNumber,
-            irs,
-            "contrib/irs/examples/lookuptables/IRS_400_IN110_OUT69_FREQ5.21GHz_destructive.csv");
     }
     return 0;
 }
