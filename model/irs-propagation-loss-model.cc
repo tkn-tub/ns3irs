@@ -167,20 +167,43 @@ IrsPropagationLossModel::DbmFromW(double w) const
     return dbm;
 }
 
+std::ostream&
+operator<<(std::ostream& os, const std::vector<IrsPath>& paths)
+{
+    os << "[ ";
+    for (size_t i = 0; i < paths.size(); ++i)
+    {
+        os << "[";
+        for (size_t j = 0; j < paths[i].size(); ++j)
+        {
+            os << paths[i][j]->GetId();
+            if (j < paths[i].size() - 1)
+            {
+                os << " -> "; // Separator between NodeIds
+            }
+        }
+        os << "] ";
+    }
+    os << "]";
+    return os;
+}
+
 std::pair<double, double>
 IrsPropagationLossModel::CalcAngles(ns3::Vector a,
                                     ns3::Vector b,
                                     ns3::Vector irs,
                                     ns3::Vector irsNormal) const
 {
-    // TODO: instead of checking for opposite sites, check for correct site -> no reflection on back
-
-    // check if a and b are on opposite sites
-    double e1 =
+    // Check if both a and b are on the correct side of the IRS (the side the normal vector points
+    // to)
+    double dotProductA =
         irsNormal.x * (a.x - irs.x) + irsNormal.y * (a.y - irs.y) + irsNormal.z * (a.z - irs.z);
-    double e2 =
+    double dotProductB =
         irsNormal.x * (b.x - irs.x) + irsNormal.y * (b.y - irs.y) + irsNormal.z * (b.z - irs.z);
-    if (e1 * e2 < std::numeric_limits<double>::epsilon())
+
+    // If either dot product is negative, the corresponding point is on the wrong side of the IRS
+    if (dotProductA < std::numeric_limits<double>::epsilon() ||
+        dotProductB < std::numeric_limits<double>::epsilon())
     {
         return std::make_pair(-1, -1);
     }
@@ -260,22 +283,7 @@ IrsPropagationLossModel::CalcIrsPaths()
     }
     // TODO: prune paths that are not possible
 
-    NS_LOG_DEBUG(m_irsPaths.size() << " possible IRS path(s)");
-
-    // Print IRS Paths for Debugging
-#ifdef NS3_BUILD_PROFILE_DEBUG
-    std::ostringstream oss;
-    for (const auto& group : m_irsPaths)
-    {
-        oss << "[ ";
-        for (const auto& node : group)
-        {
-            oss << node->GetId() << " ";
-        }
-        oss << "] ";
-    }
-    NS_LOG_DEBUG(oss.str());
-#endif
+    NS_LOG_DEBUG("Generated " << m_irsPaths.size() << " possible IRS path(s): " << m_irsPaths);
 }
 
 std::complex<double>
@@ -332,8 +340,7 @@ IrsPropagationLossModel::CalcPath(const IrsPath& path,
     std::complex<double> phase_path(0.0, theta);
 
     NS_LOG_DEBUG("IRS - Node(s): " << path.size() << ", Distance: " << totalDistance << "m"
-                                      << ", Path Loss: " << pathLoss << "dBm"
-                                      << ", Phase: " << theta);
+                                   << ", Path Loss: " << pathLoss << "dBm" << ", Phase: " << theta);
 
     return std::sqrt(DbmToW(pathLoss)) * std::exp(phase_path);
 }

@@ -229,23 +229,45 @@ IrsPropagationLossModelHelperFunctionsTestCase::DoRun()
 {
     Ptr<IrsPropagationLossModel> model = CreateObject<IrsPropagationLossModel>();
 
-    // TEST Angle Calculation
-    // opposite sides
+    // Angle Calculation - Test if wrong positions are returnt as -1,-1
     std::pair<double, double> angles =
         model->CalcAngles(Vector{0, 0, 0}, Vector{10, 10, 0}, Vector{0, 5, 0}, Vector{0, 1, 0});
-    NS_TEST_EXPECT_MSG_EQ_TOL(angles.first,
-                              -1,
-                              0.1,
-                              "Angle should be -1: " << angles.first << " | " << angles.second);
-    NS_TEST_EXPECT_MSG_EQ_TOL(angles.second,
-                              -1,
-                              0.1,
-                              "Angle should be -1: " << angles.first << " | " << angles.second);
+    NS_TEST_EXPECT_MSG_EQ(angles.first, -1, "A and B are on opposite sides of the IRS");
 
-    ns3::LogComponentEnable("IrsPropagationLossModel", ns3::LOG_LEVEL_ALL);
-    // TEST Calc Irs Paths
+    angles =
+        model->CalcAngles(Vector{-1, -1, 0}, Vector{1, -1, 0}, Vector{0, 0, 0}, Vector{0, 1, 0});
+    NS_TEST_EXPECT_MSG_EQ(angles.first, -1, "A and B are on wrong side of the IRS");
+
+    angles =
+        model->CalcAngles(Vector{-1, -1, 0}, Vector{1, 1, 0}, Vector{0, 0, 0}, Vector{0, 1, 0});
+    NS_TEST_EXPECT_MSG_EQ(angles.first,
+                          -1,
+                          "A is on wrong side of the IRS");
+
+    angles =
+        model->CalcAngles(Vector{-1, 1, 0}, Vector{1, -1, 0}, Vector{0, 0, 0}, Vector{0, 1, 0});
+    NS_TEST_EXPECT_MSG_EQ(angles.first,
+                          -1,
+                          "B is on wrong side of the IRS");
+    angles =
+        model->CalcAngles(Vector{-1, 1, 0}, Vector{1, 1, 0}, Vector{0, 0, 0}, Vector{0, -1, 0});
+    NS_TEST_EXPECT_MSG_EQ(angles.first, -1, "A and B are on wrong side of the IRS");
+
+    angles =
+        model->CalcAngles(Vector{-1, 1, 0}, Vector{1, -1, 0}, Vector{0, 0, 0}, Vector{0, -1, 0});
+    NS_TEST_EXPECT_MSG_EQ(angles.first,
+                          -1,
+                          "A is on wrong side of the IRS");
+
+    angles =
+        model->CalcAngles(Vector{-1, -1, 0}, Vector{1, 1, 0}, Vector{0, 0, 0}, Vector{0, -1, 0});
+    NS_TEST_EXPECT_MSG_EQ(angles.first,
+                          -1,
+                          "B is on wrong side of the IRS");
+
+    // Test the Calculation of irs paths
     NodeContainer irsNode;
-    irsNode.Create(3);
+    irsNode.Create(2);
 
     Ptr<IrsPropagationLossModel> lossModel = CreateObject<IrsPropagationLossModel>();
     lossModel->SetIrsNodes(&irsNode);

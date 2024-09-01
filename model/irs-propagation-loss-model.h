@@ -34,6 +34,7 @@ class IrsPropagationLossModelHelperFunctionsTestCase;
 
 namespace ns3
 {
+typedef std::vector<Ptr<Node>> IrsPath;
 
 class IrsPropagationLossModel : public PropagationLossModel
 {
@@ -100,9 +101,17 @@ class IrsPropagationLossModel : public PropagationLossModel
      */
     Ptr<PropagationLossModel> GetLosPropagatioModel() const;
 
-  private:
-    typedef std::vector<Ptr<Node>> IrsPath;
+    /**
+     * Output streamer.
+     * IRS paths are written as "[1->2]".
+     *
+     * \param [in,out] os The stream.
+     * \param [in] vector The vector to stream
+     * \return The stream.
+     */
+    friend std::ostream& operator<<(std::ostream& os, const std::vector<IrsPath>& paths);
 
+  private:
     /**
      * Transforms a Dbm value to Watt
      * \param w the Dbm value
