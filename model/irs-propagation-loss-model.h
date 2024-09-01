@@ -26,6 +26,8 @@
 #include "ns3/propagation-loss-model.h"
 #include "ns3/vector.h"
 
+#include <complex>
+
 // friend classes to test private fuctions
 class IrsPropagationLossModelTestCase;
 class IrsPropagationLossModelHelperFunctionsTestCase;
@@ -99,6 +101,8 @@ class IrsPropagationLossModel : public PropagationLossModel
     Ptr<PropagationLossModel> GetLosPropagatioModel() const;
 
   private:
+    typedef std::vector<Ptr<Node>> IrsPath;
+
     /**
      * Transforms a Dbm value to Watt
      * \param w the Dbm value
@@ -119,20 +123,20 @@ class IrsPropagationLossModel : public PropagationLossModel
      * are located on opposite sides of the IRS, the function returns (-1, -1) to indicate this
      * situation.
      *
-     * @param A position of A
-     * @param B Position of B
-     * @param I Position of IRS
-     * @param N Normal vector of the IRS
+     * @param a position of A
+     * @param b Position of B
+     * @param irs Position of IRS
+     * @param irsNormal Normal vector of the IRS
      *
      * @return A std::pair containing:
      *         - The angle of incidence in degrees (0 to 180 degrees).
      *         - The angle of reflection in degrees (0 to 180 degrees).
      *         If points A and B are on opposite sides of the IRS, both angles will be set to -1.
      */
-    std::pair<double, double> CalcAngles(ns3::Vector A,
-                                         ns3::Vector B,
-                                         ns3::Vector I,
-                                         ns3::Vector N) const;
+    std::pair<double, double> CalcAngles(ns3::Vector a,
+                                         ns3::Vector b,
+                                         ns3::Vector irs,
+                                         ns3::Vector irsNormal) const;
 
     /**
      * Wraps angle to the range -pi to pi
@@ -141,12 +145,20 @@ class IrsPropagationLossModel : public PropagationLossModel
      */
     double WrapToPi(double angle) const;
 
+    void CalcIrsPaths();
+
+    std::complex<double> CalcPath(const IrsPath& path,
+                                  double txPowerDbm,
+                                  Ptr<MobilityModel> source,
+                                  Ptr<MobilityModel> destination) const;
+
     double DoCalcRxPower(double txPowerDbm,
                          Ptr<MobilityModel> a,
                          Ptr<MobilityModel> b) const override;
 
     int64_t DoAssignStreams(int64_t stream) override;
 
+    std::vector<IrsPath> m_irsPaths;
     Ptr<NodeContainer> m_irsNodes;
     Ptr<PropagationLossModel> m_irsLossModel;
     Ptr<PropagationLossModel> m_losLossModel;

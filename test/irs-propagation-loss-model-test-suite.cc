@@ -229,6 +229,7 @@ IrsPropagationLossModelHelperFunctionsTestCase::DoRun()
 {
     Ptr<IrsPropagationLossModel> model = CreateObject<IrsPropagationLossModel>();
 
+    // TEST Angle Calculation
     // opposite sides
     std::pair<double, double> angles =
         model->CalcAngles(Vector{0, 0, 0}, Vector{10, 10, 0}, Vector{0, 5, 0}, Vector{0, 1, 0});
@@ -240,6 +241,14 @@ IrsPropagationLossModelHelperFunctionsTestCase::DoRun()
                               -1,
                               0.1,
                               "Angle should be -1: " << angles.first << " | " << angles.second);
+
+    ns3::LogComponentEnable("IrsPropagationLossModel", ns3::LOG_LEVEL_ALL);
+    // TEST Calc Irs Paths
+    NodeContainer irsNode;
+    irsNode.Create(3);
+
+    Ptr<IrsPropagationLossModel> lossModel = CreateObject<IrsPropagationLossModel>();
+    lossModel->SetIrsNodes(&irsNode);
 }
 
 /**
@@ -247,8 +256,6 @@ IrsPropagationLossModelHelperFunctionsTestCase::DoRun()
  *
  * \brief Propagation models TestSuite
  *
- * This TestSuite tests the following models:
- *   - FriisPropagationLossModel
  */
 class IrsPropagationLossModelsTestSuite : public TestSuite
 {

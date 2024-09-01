@@ -35,7 +35,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <complex>
 #include <cstdint>
 #include <iostream>
 #include <ostream>
@@ -59,17 +58,20 @@ IrsPropagationLossModel::GetTypeId()
             .AddAttribute("IrsNodes",
                           "The IRS nodes in the network.",
                           PointerValue(),
-                          MakePointerAccessor(&IrsPropagationLossModel::m_irsNodes),
+                          MakePointerAccessor(&IrsPropagationLossModel::SetIrsNodes,
+                                              &IrsPropagationLossModel::GetIrsNodes),
                           MakePointerChecker<NodeContainer>())
             .AddAttribute("IrsLossModel",
                           "The propagation loss model for the path over the IRS.",
                           PointerValue(),
-                          MakePointerAccessor(&IrsPropagationLossModel::m_irsLossModel),
+                          MakePointerAccessor(&IrsPropagationLossModel::SetIrsPropagationModel,
+                                              &IrsPropagationLossModel::GetIrsPropagatioModel),
                           MakePointerChecker<PropagationLossModel>())
             .AddAttribute("LosLossModel",
                           "The propagation loss model for the line-of-sight path.",
                           PointerValue(),
-                          MakePointerAccessor(&IrsPropagationLossModel::m_losLossModel),
+                          MakePointerAccessor(&IrsPropagationLossModel::SetLosPropagationModel,
+                                              &IrsPropagationLossModel::GetLosPropagatioModel),
                           MakePointerChecker<PropagationLossModel>())
             .AddAttribute(
                 "Frequency",
@@ -112,9 +114,9 @@ IrsPropagationLossModel::GetFrequency() const
 void
 IrsPropagationLossModel::SetIrsNodes(Ptr<NodeContainer> nodes)
 {
-    NS_ASSERT_MSG(m_irsNodes && m_irsNodes->GetN() > 0,
-                  "IRS nodes are not set or the container is empty");
+    NS_ASSERT_MSG(nodes && nodes->GetN() > 0, "IRS nodes are not set or the container is empty");
     m_irsNodes = nodes;
+    CalcIrsPaths();
 }
 
 Ptr<NodeContainer>
@@ -166,22 +168,26 @@ IrsPropagationLossModel::DbmFromW(double w) const
 }
 
 std::pair<double, double>
-IrsPropagationLossModel::CalcAngles(ns3::Vector A,
-                                    ns3::Vector B,
-                                    ns3::Vector I,
-                                    ns3::Vector N) const
+IrsPropagationLossModel::CalcAngles(ns3::Vector a,
+                                    ns3::Vector b,
+                                    ns3::Vector irs,
+                                    ns3::Vector irsNormal) const
 {
-    // check if A and B are on opposite sites
-    double e1 = N.x * (A.x - I.x) + N.y * (A.y - I.y) + N.z * (A.z - I.z);
-    double e2 = N.x * (B.x - I.x) + N.y * (B.y - I.y) + N.z * (B.z - I.z);
+    // TODO: instead of checking for opposite sites, check for correct site -> no reflection on back
+
+    // check if a and b are on opposite sites
+    double e1 =
+        irsNormal.x * (a.x - irs.x) + irsNormal.y * (a.y - irs.y) + irsNormal.z * (a.z - irs.z);
+    double e2 =
+        irsNormal.x * (b.x - irs.x) + irsNormal.y * (b.y - irs.y) + irsNormal.z * (b.z - irs.z);
     if (e1 * e2 < std::numeric_limits<double>::epsilon())
     {
         return std::make_pair(-1, -1);
     }
 
-    // Vector from IRS to A and B
-    ns3::Vector AI = I - A;
-    ns3::Vector IB = B - I;
+    // Vector from IRS to a and b
+    ns3::Vector AI = irs - a;
+    ns3::Vector IB = b - irs;
 
     double IAnorm = AI.GetLength();
     double IBnorm = IB.GetLength();
@@ -193,12 +199,12 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector A,
     }
 
     // Calculate the angle of incidence
-    double cosThetaInc = (AI * N) / AI.GetLength();
+    double cosThetaInc = (AI * irsNormal) / AI.GetLength();
     double thetaInc = std::acos(std::clamp(cosThetaInc, -1.0, 1.0));
     double thetaIncDeg = thetaInc * (180.0 / M_PI);
 
     // Calculate the angle of reflection
-    double cosThetaRef = (IB * N) / IB.GetLength();
+    double cosThetaRef = (IB * irsNormal) / IB.GetLength();
     double thetaRef = std::acos(std::clamp(cosThetaRef, -1.0, 1.0));
     double thetaRefDeg = thetaRef * (180.0 / M_PI);
 
@@ -225,132 +231,155 @@ IrsPropagationLossModel::WrapToPi(double angle) const
     return angle;
 }
 
-double
-IrsPropagationLossModel::DoCalcRxPower(double txPowerDbm,
-                                       Ptr<ns3::MobilityModel> a,
-                                       Ptr<ns3::MobilityModel> b) const
+void
+IrsPropagationLossModel::CalcIrsPaths()
 {
-    NS_ASSERT_MSG(m_irsLossModel, "IRS path loss model is not set");
-
-    // complex envelope of recieved signal
-    std::complex<double> r(0.0, 0.0);
-    NS_LOG_DEBUG("--------- IRS Propagation Loss Model Debug Info ---------\n"
-                 << "m_frequency (Hz): " << m_frequency << "\n"
-                 << "TX Power (dBm): " << txPowerDbm);
-
-#ifdef NS3_BUILD_PROFILE_DEBUG
-    // get current frequency - only possible when WifiNetDevice is used
-    Ptr<Node> nodeA = a->GetObject<Node>();
-    if (nodeA)
-    {
-        Ptr<NetDevice> device = nodeA->GetDevice(0);
-        Ptr<WifiNetDevice> wifiNetDevice = DynamicCast<WifiNetDevice>(device);
-        if (wifiNetDevice)
-        {
-            Ptr<Channel> channel = wifiNetDevice->GetChannel();
-            Ptr<WifiPhy> wifiPhy = wifiNetDevice->GetPhy();
-            if (wifiPhy)
-            {
-                NS_LOG_DEBUG("Frequency (MHz): " << wifiPhy->GetFrequency());
-            }
-        }
-    }
-#endif
-
+    m_irsPaths.clear();
+    // Add paths with single IRS
     for (auto irsNode = m_irsNodes->Begin(); irsNode != m_irsNodes->End(); irsNode++)
     {
-        Ptr<Node> node = *irsNode;
-        Ptr<Irs> irs = node->GetObject<Irs>();
+        m_irsPaths.push_back({*irsNode});
+    }
+    // Add paths with multiple IRS (up to all IRS nodes)
+    for (uint32_t pathLength = 2; pathLength <= m_irsNodes->GetN(); ++pathLength)
+    {
+        std::vector<bool> v(m_irsNodes->GetN());
+        std::fill(v.end() - pathLength, v.end(), true);
+        do
+        {
+            IrsPath path;
+            for (uint32_t i = 0; i < m_irsNodes->GetN(); ++i)
+            {
+                if (v[i])
+                {
+                    path.push_back(m_irsNodes->Get(i));
+                }
+            }
+            m_irsPaths.push_back(path);
+        } while (std::next_permutation(v.begin(), v.end()));
+    }
+    // TODO: prune paths that are not possible
 
+    NS_LOG_DEBUG(m_irsPaths.size() << " possible IRS path(s)");
+
+    // Print IRS Paths for Debugging
+#ifdef NS3_BUILD_PROFILE_DEBUG
+    std::ostringstream oss;
+    for (const auto& group : m_irsPaths)
+    {
+        oss << "[ ";
+        for (const auto& node : group)
+        {
+            oss << node->GetId() << " ";
+        }
+        oss << "] ";
+    }
+    NS_LOG_DEBUG(oss.str());
+#endif
+}
+
+std::complex<double>
+IrsPropagationLossModel::CalcPath(const IrsPath& path,
+                                  double txPowerDbm,
+                                  Ptr<MobilityModel> source,
+                                  Ptr<MobilityModel> destination) const
+{
+    double pathLoss = txPowerDbm;
+    double totalDistance = 0.0;
+    double totalPhaseShift = 0.0;
+
+    NS_LOG_DEBUG("-- new path --");
+
+    for (auto curr = path.begin(); curr != path.end(); ++curr)
+    {
+        Ptr<MobilityModel> prev =
+            (curr != path.begin()) ? (*(curr - 1))->GetObject<MobilityModel>() : source;
+        Ptr<MobilityModel> next =
+            (curr + 1 != path.end()) ? (*(curr + 1))->GetObject<MobilityModel>() : destination;
+        Ptr<Node> irs = *curr;
+
+        // Calculate angles
         std::pair<double, double> angles =
-            CalcAngles(a->GetPosition(),
-                       b->GetPosition(),
+            CalcAngles(prev->GetPosition(),
+                       next->GetPosition(),
                        irs->GetObject<MobilityModel>()->GetPosition(),
                        irs->GetObject<Irs>()->GetDirection());
 
-        NS_LOG_DEBUG("" << "IRS Position (" << node->GetId()
-                        << "): " << node->GetObject<MobilityModel>()->GetPosition() << "\n"
-                        << "TX Position: " << a->GetPosition() << "\n"
-                        << "RX Position: " << b->GetPosition() << "\n"
-                        << "IRS Direction: " << node->GetObject<Irs>()->GetDirection() << "\n"
-                        << "Ingoing Angle (degrees): " << angles.first << "\n"
-                        << "Outgoing Angle (degrees): " << angles.second);
-
-        // if the incoming angle is < 1 or > 179, then the IRS is not in the line of sight
-        // if Nodes are on opposite sides angles are (-1, -1)
+        // Skip if IRS is not in line of sight
         if (angles.first < 0 || angles.second < 0)
         {
-            NS_LOG_INFO("IRS (" << node->GetId() << ") with position: "
-                                << node->GetObject<MobilityModel>()->GetPosition()
-                                << " is not in LOS between " << a->GetPosition() << " and "
-                                << b->GetPosition());
-            continue;
+            return std::complex<double>(0.0, 0.0);
         }
+
+        // Get IRS impact from lookuptable
         IrsEntry modifier =
-            irs->GetLookupTable()->GetIrsEntry(std::round(angles.first), std::round(angles.second));
-
-        // distance of irs path
-        double d = a->GetDistanceFrom(node->GetObject<MobilityModel>()) +
-                   node->GetObject<MobilityModel>()->GetDistanceFrom(b);
-
-        // pathloss tx to irs
-        double pl_irs =
-            m_irsLossModel->CalcRxPower(txPowerDbm, a, node->GetObject<MobilityModel>());
-        NS_LOG_DEBUG("PL TX to IRS (dBm): " << pl_irs);
-
-        // gain of irs
-        pl_irs += modifier.gain;
-
-        // add random variable to account for small-scale fading or measurement noise
-        // Normal Distribution (0, 0.1)
-        pl_irs += m_rng->GetValue();
-
-        NS_LOG_DEBUG("PL with IRS Gain (dBm): " << pl_irs);
-        // pathloss irs to rx
-        pl_irs = m_irsLossModel->CalcRxPower(pl_irs, node->GetObject<MobilityModel>(), b);
-
-        // calculate phase of irs path
-        double theta = (2 * M_PI * d) / m_lambda;
-        // add phase shift of irs to theta
-        theta += modifier.phase_shift;
-        // wrap to pi
-        theta = WrapToPi(theta);
-        // theta to complex
-        std::complex<double> phase_irs(0.0, theta);
-
+            irs->GetObject<Irs>()->GetLookupTable()->GetIrsEntry(std::round(angles.first),
+                                                                 std::round(angles.second));
         NS_LOG_INFO("IRS Gain (dBm): " << modifier.gain
                                        << " | IRS phase shift (radians): " << modifier.phase_shift);
+        // add path lenght and phase shift
+        totalDistance += prev->GetDistanceFrom(irs->GetObject<MobilityModel>());
+        totalPhaseShift += modifier.phase_shift;
+        // calulate pathloss
+        pathLoss = m_irsLossModel->CalcRxPower(pathLoss, prev, irs->GetObject<MobilityModel>());
+        pathLoss += modifier.gain + m_rng->GetValue();
+    }
+    totalDistance += path.back()->GetObject<MobilityModel>()->GetDistanceFrom(destination);
+    pathLoss =
+        m_irsLossModel->CalcRxPower(pathLoss, path.back()->GetObject<MobilityModel>(), destination);
+    // Calculate phase for the entire path
+    double theta = WrapToPi(((2 * M_PI * totalDistance) / m_lambda) + totalPhaseShift);
+    std::complex<double> phase_path(0.0, theta);
 
-        NS_LOG_DEBUG("" << "Distance over IRS (m): " << d << "\n"
-                        << "Phase IRS (radians): " << phase_irs << "\n"
-                        << "RX Power IRS (dBm): " << pl_irs);
-        // Add IRS path contribution
-        r += std::sqrt(DbmToW(pl_irs)) * std::exp(phase_irs);
+    NS_LOG_DEBUG("IRS - Node(s): " << path.size() << ", Distance: " << totalDistance << "m"
+                                      << ", Path Loss: " << pathLoss << "dBm"
+                                      << ", Phase: " << theta);
+
+    return std::sqrt(DbmToW(pathLoss)) * std::exp(phase_path);
+}
+
+double
+IrsPropagationLossModel::DoCalcRxPower(double txPowerDbm,
+                                       Ptr<MobilityModel> a,
+                                       Ptr<MobilityModel> b) const
+{
+    NS_ASSERT_MSG(m_irsLossModel, "IRS path loss model is not set");
+
+    NS_LOG_DEBUG("--------- IRS Propagation Loss Model Debug Info ---------");
+    NS_LOG_DEBUG("m_frequency (Hz): " << m_frequency);
+    NS_LOG_DEBUG("TX Power (dBm): " << txPowerDbm);
+    NS_LOG_DEBUG("TX Position: " << a->GetPosition());
+    NS_LOG_DEBUG("RX Position: " << b->GetPosition());
+
+    std::complex<double> totalSignal(0.0, 0.0);
+
+    // Calculate contribution from each precomputed path
+    for (const auto& path : m_irsPaths)
+    {
+        totalSignal += CalcPath(path, txPowerDbm, a, b);
     }
 
+    // Add LOS/NLOS path contribution
     if (m_losLossModel)
     {
-        // calculate amplitude
-        double pl_other = m_losLossModel->CalcRxPower(txPowerDbm, a, b);
+        double pl_direct = m_losLossModel->CalcRxPower(txPowerDbm, a, b);
+        double distance = a->GetDistanceFrom(b);
+        double theta = WrapToPi((2 * M_PI * distance) / m_lambda);
+        std::complex<double> phase_direct(0.0, theta);
+        std::complex<double> los_contribution =
+            std::sqrt(DbmToW(pl_direct)) * std::exp(phase_direct);
+        totalSignal += los_contribution;
 
-        // calculate phase
-        double theta = (2 * M_PI * a->GetDistanceFrom(b)) / m_lambda;
-        theta = WrapToPi(theta);
-        std::complex<double> phase_other(0.0, theta);
-
-        NS_LOG_DEBUG("" << "RX Power LOS (dBm): " << pl_other << "\n"
-                        << "Phase LOS (radians): " << phase_other << "\n"
-                        << "Distance LOS (m): " << a->GetDistanceFrom(b));
-
-        r += std::sqrt(DbmToW(pl_other)) * std::exp(phase_other);
+        NS_LOG_DEBUG("LOS Path - Distance: " << distance << "m, Path Loss: " << pl_direct
+                                             << "dBm, Phase: " << theta
+                                             << ", Contribution: " << std::abs(los_contribution));
     }
     else
     {
         NS_LOG_DEBUG("No N/LOS propagation model specified. Calculating only IRS path.");
     }
-
-    // Log resulting received power
-    double rxPower = DbmFromW(std::pow(std::abs(r), 2));
+    // Calculate final received power
+    double rxPower = DbmFromW(std::pow(std::abs(totalSignal), 2));
     NS_LOG_DEBUG("Resulting RX Power (dBm): " << rxPower);
 
     return rxPower;
