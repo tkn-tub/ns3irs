@@ -18,6 +18,7 @@
  */
 
 #include "irs-lookup-helper.h"
+
 #include <cstdint>
 
 namespace ns3

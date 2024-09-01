@@ -42,7 +42,7 @@ classdef helperRISSurface < matlab.System
             antarray = getRISArray(obj);
             stv = phased.SteeringVector('SensorArray',antarray);
         end
-        
+
         function risarray = getRISArray(obj)
             if isLocked(obj)
                 risarray = obj.cAntArray;

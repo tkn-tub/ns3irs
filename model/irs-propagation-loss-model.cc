@@ -25,7 +25,6 @@
 #include "ns3/channel.h"
 #include "ns3/constant-position-mobility-model.h"
 #include "ns3/double.h"
-#include "ns3/irs.h"
 #include "ns3/mobility-model.h"
 #include "ns3/object-factory.h"
 #include "ns3/pointer.h"
@@ -179,7 +178,7 @@ operator<<(std::ostream& os, const std::vector<IrsPath>& paths)
             os << paths[i][j]->GetId();
             if (j < paths[i].size() - 1)
             {
-                os << " -> "; // Separator between NodeIds
+                os << " -> ";
             }
         }
         os << "] ";

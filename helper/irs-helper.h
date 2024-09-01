@@ -44,11 +44,12 @@ class IrsHelper
     void SetLookupTable(Ptr<IrsLookupTable> table);
 
     void SetDirection(Vector direction);
+
   private:
     ObjectFactory m_irs;
     Ptr<IrsLookupTable> m_irsLookupTable;
     Vector m_direction;
 };
-}
+} // namespace ns3
 
 #endif /* IRS_HELPER_H */

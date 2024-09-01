@@ -67,9 +67,9 @@ main(int argc, char* argv[])
     // Install Mobility Model
     MobilityHelper mobility;
     Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
-    positionAlloc->Add(Vector(0.0, 0.0, 0.0));    // Position for eNodeB
-    positionAlloc->Add(Vector(0.0, 0.0, 0.0));    // Position for UE
-    positionAlloc->Add(Vector(5, -10, 0.0)); // Position for UE
+    positionAlloc->Add(Vector(0.0, 0.0, 0.0)); // Position for eNodeB
+    positionAlloc->Add(Vector(0.0, 0.0, 0.0)); // Position for UE
+    positionAlloc->Add(Vector(5, -10, 0.0));   // Position for UE
 
     mobility.SetPositionAllocator(positionAlloc);
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");

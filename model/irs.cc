@@ -20,6 +20,7 @@
 #include "irs.h"
 
 #include "ns3/pointer.h"
+
 #include <cstdint>
 
 namespace ns3
@@ -76,9 +77,12 @@ Irs::SetDirection(const Vector& direction)
 {
     // Normalize the vector
     double m = direction.GetLength();
-    if (m != 0) {
+    if (m != 0)
+    {
         m_direction = Vector3D(direction.x / m, direction.y / m, direction.z / m);
-    } else {
+    }
+    else
+    {
         m_direction = direction;
     }
 }

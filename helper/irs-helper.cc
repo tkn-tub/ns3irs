@@ -132,7 +132,6 @@ IrsHelper::SetLookupTable(Ptr<IrsLookupTable> table)
 void
 IrsHelper::SetDirection(Vector direction)
 {
-
     m_direction = direction;
 }
 } // namespace ns3
