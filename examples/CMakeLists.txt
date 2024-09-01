@@ -47,6 +47,16 @@ build_lib_example(
 )
 
 build_lib_example(
+    NAME irs-mobility
+    SOURCE_FILES irs-mobility.cc
+    LIBRARIES_TO_LINK
+        ${libirs}
+        ${libwifi}
+        ${libinternet}
+        ${libapplications}
+)
+
+build_lib_example(
     NAME hidden-node-problem
     SOURCE_FILES hidden-node-problem.cc
     LIBRARIES_TO_LINK
