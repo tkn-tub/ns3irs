@@ -257,30 +257,78 @@ void
 IrsPropagationLossModel::CalcIrsPaths()
 {
     m_irsPaths.clear();
-    // Add paths with single IRS
+
+    // Helper function to check if two IRS are facing each other
+    auto facingEachOther = [](Ptr<Node> irs1, Ptr<Node> irs2) {
+        auto mobility1 = irs1->GetObject<MobilityModel>();
+        auto mobility2 = irs2->GetObject<MobilityModel>();
+        auto irsObj1 = irs1->GetObject<Irs>();
+        auto irsObj2 = irs2->GetObject<Irs>();
+
+        NS_ASSERT_MSG(mobility1 && mobility2, "Mobility model not set for IRS node");
+        NS_ASSERT_MSG(irsObj1 && irsObj2, "IRS object not set for node");
+
+        Vector pos1 = mobility1->GetPosition();
+        Vector pos2 = mobility2->GetPosition();
+
+        Vector vec12 = pos2 - pos1;
+        Vector vec21 = pos1 - pos2;
+
+        // Check if the dot products are positive (vectors are pointing in the same general
+        // direction)
+        return (irsObj1->GetDirection() * vec12 > std::numeric_limits<double>::epsilon()) &&
+               (irsObj2->GetDirection() * vec21 > std::numeric_limits<double>::epsilon());
+    };
+
+    // Generate all possible paths considering order
+    std::vector<Ptr<Node>> irsNodes;
     for (auto irsNode = m_irsNodes->Begin(); irsNode != m_irsNodes->End(); irsNode++)
     {
-        m_irsPaths.push_back({*irsNode});
+        irsNodes.push_back(*irsNode);
     }
-    // Add paths with multiple IRS (up to all IRS nodes)
-    for (uint32_t pathLength = 2; pathLength <= m_irsNodes->GetN(); ++pathLength)
+
+    for (uint32_t pathLength = 1; pathLength <= irsNodes.size(); ++pathLength)
     {
-        std::vector<bool> v(m_irsNodes->GetN());
+        std::vector<bool> v(irsNodes.size());
         std::fill(v.end() - pathLength, v.end(), true);
+
         do
         {
-            IrsPath path;
-            for (uint32_t i = 0; i < m_irsNodes->GetN(); ++i)
+            std::vector<Ptr<Node>> currentPath;
+            for (uint32_t i = 0; i < irsNodes.size(); ++i)
             {
                 if (v[i])
                 {
-                    path.push_back(m_irsNodes->Get(i));
+                    currentPath.push_back(irsNodes[i]);
                 }
             }
-            m_irsPaths.push_back(path);
+
+            // Generate all permutations of the current path
+            do
+            {
+                bool validPath = true;
+
+                // Check if IRSs are facing each other for paths longer than 1
+                if (currentPath.size() > 1)
+                {
+                    for (size_t i = 0; i < currentPath.size() - 1; ++i)
+                    {
+                        if (!facingEachOther(currentPath[i], currentPath[i + 1]))
+                        {
+                            validPath = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (validPath)
+                {
+                    m_irsPaths.push_back(currentPath);
+                }
+            } while (std::next_permutation(currentPath.begin(), currentPath.end()));
+
         } while (std::next_permutation(v.begin(), v.end()));
     }
-    // TODO: prune paths that are not possible
 
     NS_LOG_DEBUG("Generated " << m_irsPaths.size() << " possible IRS path(s): " << m_irsPaths);
 }

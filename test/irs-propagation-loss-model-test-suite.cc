@@ -22,6 +22,7 @@
 #include "ns3/irs-helper.h"
 #include "ns3/irs-propagation-loss-model.h"
 #include "ns3/log.h"
+#include "ns3/mobility-helper.h"
 #include "ns3/simulator.h"
 #include "ns3/test.h"
 
@@ -213,6 +214,7 @@ class IrsPropagationLossModelHelperFunctionsTestCase : public TestCase
 
   private:
     void DoRun() override;
+    int IrsPathsTest(const std::vector<Vector>& directions, const std::vector<Vector>& positions);
 };
 
 IrsPropagationLossModelHelperFunctionsTestCase::IrsPropagationLossModelHelperFunctionsTestCase()
@@ -222,6 +224,43 @@ IrsPropagationLossModelHelperFunctionsTestCase::IrsPropagationLossModelHelperFun
 
 IrsPropagationLossModelHelperFunctionsTestCase::~IrsPropagationLossModelHelperFunctionsTestCase()
 {
+}
+
+int
+IrsPropagationLossModelHelperFunctionsTestCase::IrsPathsTest(const std::vector<Vector>& directions,
+                                                             const std::vector<Vector>& positions)
+{
+    NS_ASSERT_MSG(directions.size() == positions.size(),
+                  "The number of directions must match the number of positions");
+    NodeContainer irsNodes;
+    irsNodes.Create(directions.size());
+
+    // Create IRS helper and mobility helper
+    IrsHelper irsHelper;
+    MobilityHelper mobility;
+    Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
+
+    // Install IRS nodes based on the directions and positions
+    for (size_t i = 0; i < directions.size(); ++i)
+    {
+        irsHelper.SetDirection(directions[i]);
+        irsHelper.SetLookupTable(
+            "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv");
+        irsHelper.Install(irsNodes.Get(i));
+
+        positionAlloc->Add(positions[i]);
+    }
+
+    // Configure mobility
+    mobility.SetPositionAllocator(positionAlloc);
+    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    mobility.Install(irsNodes);
+
+    // Create and configure the propagation loss model
+    Ptr<IrsPropagationLossModel> lossModel = CreateObject<IrsPropagationLossModel>();
+    lossModel->SetIrsNodes(&irsNodes);
+
+    return lossModel->m_irsPaths.size();
 }
 
 void
@@ -258,11 +297,35 @@ IrsPropagationLossModelHelperFunctionsTestCase::DoRun()
     NS_TEST_EXPECT_MSG_EQ(angles.first, -1, "B is on wrong side of the IRS");
 
     // Test the Calculation of irs paths
-    NodeContainer irsNode;
-    irsNode.Create(2);
+    // NS_TEST_EXPECT_MSG_EQ(
+    //     IrsPathsTest({Vector(0, 1, 0), Vector(0, -1, 0)},
+    //                  {Vector(0.0, 0.0, 0.0), Vector(2.0, 2.0, 0.0)}),
+    //     4,
+    //     "Two IRS nodes facing each other");
+    //
+    // NS_TEST_EXPECT_MSG_EQ(
+    //     IrsPathsTest({Vector(0, 1, 0), Vector(0, 1, 0)},
+    //                  {Vector(0.0, 0.0, 0.0), Vector(2.0, 2.0, 0.0)}),
+    //     2,
+    //     "Two IRS nodes not facing each other");
+    //
+    // NS_TEST_EXPECT_MSG_EQ(
+    //     IrsPathsTest({Vector(0, 1, 0), Vector(0, -1, 0), Vector(0, -1, 0)},
+    //                  {Vector(0.0, 0.0, 0.0), Vector(2.0, 2.0, 0.0), Vector(4.0, 2.0, 0.0)}),
+    //     9,
+    //     "Three IRS nodes two facing in same direction on in opposite");
 
-    Ptr<IrsPropagationLossModel> lossModel = CreateObject<IrsPropagationLossModel>();
-    lossModel->SetIrsNodes(&irsNode);
+    NS_TEST_EXPECT_MSG_EQ(
+        IrsPathsTest({Vector(1, 1, 0), Vector(1, -1, 0), Vector(-1, -1, 0)},
+                     {Vector(0.0, 0.0, 0.0), Vector(0.0, 2.0, 0.0), Vector(2.0, 2.0, 0.0)}),
+        15,
+        "Three IRS nodes two facing in same direction on in opposite");
+
+    // NS_TEST_EXPECT_MSG_EQ(
+    //     IrsPathsTest({Vector(1, 1, 0), Vector(1, -1, 0), Vector(-1, -1, 0), Vector(-1, 11, 0)},
+    //                  {Vector(0.0, 0.0, 0.0), Vector(0.0, 2.0, 0.0), Vector(2.0, 2.0, 0.0), Vector(2.0, 0.0, 0.0)}),
+    //     64,
+    //     "Three IRS nodes two facing in same direction on in opposite");
 }
 
 /**
