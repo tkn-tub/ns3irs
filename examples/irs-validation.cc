@@ -371,13 +371,14 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
         MakeCallback(&ScenarioStatistics::TxCallback, &stats));
 
     // Run simulation
-    double simTime = 120;
+    double simTime = 30;
     Simulator::Stop(Seconds(simTime));
     Simulator::Run();
 
     std::cout << std::fixed << std::setprecision(2) << "Scenario: " << stats.GetScenarioName()
-              << ", Throughput: " << stats.GetThroughput(simTime-1) << " Mbps" << ", SNR: " << stats.GetSNR()
-              << " dBm" << ", Data Rate: " << stats.GetDataRate() << " Mbps"
+              << ", Throughput: " << stats.GetThroughput(simTime - 1) << " Mbps"
+              << ", SNR: " << stats.GetSNR() << " dBm" << ", Data Rate: " << stats.GetDataRate()
+              << " Mbps"
               << ", Success Rate:" << stats.GetSuccessRate()
               << "%, Transmitted Packets:" << stats.GetTotalTxPackets()
               << ", Recieved Packets:" << stats.GetTotalRxPackets() << std::endl;
