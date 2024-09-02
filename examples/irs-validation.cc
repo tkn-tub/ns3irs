@@ -57,7 +57,7 @@ class ScenarioStatistics
   public:
     ScenarioStatistics(std::string scenarioName);
     void RxCallback(std::string path, Ptr<const Packet> packet, const Address& from);
-    double GetThroughput();
+    double GetThroughput(double time);
     std::string GetScenarioName();
     double GetDataRate() const;
     double GetSNR() const;
@@ -107,9 +107,9 @@ ScenarioStatistics::RxCallback(std::string path, Ptr<const Packet> packet, const
 }
 
 double
-ScenarioStatistics::GetThroughput()
+ScenarioStatistics::GetThroughput(double time)
 {
-    m_throughput = (m_bytesTotal * 8.0) / (1e6 * 10); // Mbps over 10 seconds
+    m_throughput = (m_bytesTotal * 8.0) / (1e6 * time);
     return m_throughput;
 }
 
@@ -230,7 +230,7 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
                                        DoubleValue(5.21e9));
         positionAlloc->Add(Vector(1.35, -1.35, 0));
     }
-    else if (scenario == "IRS Constructive")
+    else if (scenario == "IRSConstructive")
     {
         irsNode.Create(1);
         IrsHelper irsHelper;
@@ -253,7 +253,7 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
                                        DoubleValue(5.21e9));
         positionAlloc->Add(Vector(1.35, -1.35, 0));
     }
-    else if (scenario == "IRS Destructive")
+    else if (scenario == "IRSDestructive")
     {
         irsNode.Create(1);
         IrsHelper irsHelper;
@@ -276,7 +276,7 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
                                        DoubleValue(5.21e9));
         positionAlloc->Add(Vector(20.5186, -7.6093, 0));
     }
-    else if (scenario == "Multi IRS")
+    else if (scenario == "MultiIRS")
     {
         irsNode.Create(2);
         IrsHelper irsHelper;
@@ -371,11 +371,12 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
         MakeCallback(&ScenarioStatistics::TxCallback, &stats));
 
     // Run simulation
-    Simulator::Stop(Seconds(10));
+    double simTime = 120;
+    Simulator::Stop(Seconds(simTime));
     Simulator::Run();
 
     std::cout << std::fixed << std::setprecision(2) << "Scenario: " << stats.GetScenarioName()
-              << ", Throughput: " << stats.GetThroughput() << " Mbps" << ", SNR: " << stats.GetSNR()
+              << ", Throughput: " << stats.GetThroughput(simTime-1) << " Mbps" << ", SNR: " << stats.GetSNR()
               << " dBm" << ", Data Rate: " << stats.GetDataRate() << " Mbps"
               << ", Success Rate:" << stats.GetSuccessRate()
               << "%, Transmitted Packets:" << stats.GetTotalTxPackets()
@@ -428,18 +429,18 @@ main(int argc, char* argv[])
     {
         // Scenario 3: IRS Constructive
         Vector irs(1.35, -1.35, 0);
-        RunScenario("IRS Constructive", wifiManager, runNumber);
+        RunScenario("IRSConstructive", wifiManager, runNumber);
     }
     else if (scenario == "IrsDestructive")
     {
         // Scenario 4: IRS Destructive
         Vector irs(20.5186, -7.6093, 0);
-        RunScenario("IRS Destructive", wifiManager, runNumber);
+        RunScenario("IRSDestructive", wifiManager, runNumber);
     }
     else if (scenario == "multiIrs")
     {
         // Scenario 5: 2 Irs
-        RunScenario("Multi IRS", wifiManager, runNumber);
+        RunScenario("MultiIRS", wifiManager, runNumber);
     }
     return 0;
 }
