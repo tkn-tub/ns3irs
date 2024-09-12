@@ -51,6 +51,7 @@ class IrsLookupTable : public Object
     static TypeId GetTypeId();
 
     IrsLookupTable();
+    ~IrsLookupTable() override;
 
     void Insert(uint8_t in_angle, uint8_t out_angle, double gain, double phase_shift);
 

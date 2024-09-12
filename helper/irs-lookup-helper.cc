@@ -36,6 +36,11 @@ IrsLookupTable::IrsLookupTable()
 {
 }
 
+IrsLookupTable::~IrsLookupTable()
+{
+    m_irsLookupTable.clear();
+}
+
 void
 IrsLookupTable::Insert(uint8_t in_angle, uint8_t out_angle, double gain, double phase_shift)
 {
