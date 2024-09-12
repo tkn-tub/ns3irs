@@ -28,21 +28,11 @@
 
 using namespace ns3;
 
-int
-main(int argc, char* argv[])
+void
+RunScenario(std::string scenario)
 {
-    CommandLine cmd(__FILE__);
-    cmd.Parse(argc, argv);
-
-    ConfigStore inputConfig;
-    inputConfig.ConfigureDefaults();
-
-    // Parse again so you can override default values from the command line
-    cmd.Parse(argc, argv);
-
     Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
 
-    // ns3::LogComponentEnable("IrsPropagationLossModel", ns3::LOG_LEVEL_ALL);
     // Create Nodes: eNodeB and UE
     NodeContainer enbNodes;
     NodeContainer ueNodes;
@@ -52,24 +42,46 @@ main(int argc, char* argv[])
     irsNodes.Create(1);
 
     IrsHelper irsHelper;
-    irsHelper.SetDirection(Vector(0, 1, 0));
+    irsHelper.SetDirection(Vector(1, 1, 0));
     irsHelper.SetLookupTable(
         "contrib/irs/examples/lookuptables/IRS_400_IN153_OUT27_FREQ1.50GHz_rem.csv");
     irsHelper.Install(irsNodes);
 
-    Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
-    irsLossModel->SetFrequency(1.5e9);
-    lteHelper->SetAttribute("PathlossModel", StringValue("ns3::IrsPropagationLossModel"));
-    lteHelper->SetPathlossModelAttribute("IrsNodes", PointerValue(&irsNodes));
-    lteHelper->SetPathlossModelAttribute("IrsLossModel", PointerValue(irsLossModel));
-    lteHelper->SetPathlossModelAttribute("Frequency", DoubleValue(5.21e9));
-
+    if (scenario == "LOS")
+    {
+        lteHelper->SetAttribute("PathlossModel",
+                                StringValue("ns3::LogDistancePropagationLossModel"));
+        lteHelper->SetPathlossModelAttribute("ReferenceLoss", DoubleValue(35.9696));
+    }
+    else if (scenario == "IRS")
+    {
+        Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
+        irsLossModel->SetFrequency(1.5e9);
+        lteHelper->SetAttribute("PathlossModel", StringValue("ns3::IrsPropagationLossModel"));
+        lteHelper->SetPathlossModelAttribute("IrsNodes", PointerValue(&irsNodes));
+        lteHelper->SetPathlossModelAttribute("IrsLossModel", PointerValue(irsLossModel));
+        lteHelper->SetPathlossModelAttribute("Frequency", DoubleValue(5.21e9));
+    }
+    else if (scenario == "IRS+LOS")
+    {
+        Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
+        irsLossModel->SetFrequency(1.5e9);
+        Ptr<LogDistancePropagationLossModel> losLossModel =
+            CreateObject<LogDistancePropagationLossModel>();
+        losLossModel->SetReference(1.0, 35.9696);
+        losLossModel->SetPathLossExponent(3);
+        lteHelper->SetAttribute("PathlossModel", StringValue("ns3::IrsPropagationLossModel"));
+        lteHelper->SetPathlossModelAttribute("IrsNodes", PointerValue(&irsNodes));
+        lteHelper->SetPathlossModelAttribute("IrsLossModel", PointerValue(irsLossModel));
+        lteHelper->SetPathlossModelAttribute("LosLossModel", PointerValue(losLossModel));
+        lteHelper->SetPathlossModelAttribute("Frequency", DoubleValue(5.21e9));
+    }
     // Install Mobility Model
     MobilityHelper mobility;
     Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
-    positionAlloc->Add(Vector(0.0, 0.0, 0.0)); // Position for eNodeB
-    positionAlloc->Add(Vector(0.0, 0.0, 0.0)); // Position for UE
-    positionAlloc->Add(Vector(5, -10, 0.0));   // Position for UE
+    positionAlloc->Add(Vector(0.0, 0.0, 0.0));  // Position for eNodeB
+    positionAlloc->Add(Vector(0.0, 0.0, 0.0));  // Position for UE
+    positionAlloc->Add(Vector(0.0, -2.0, 0.0)); // Position for IRS
 
     mobility.SetPositionAllocator(positionAlloc);
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -100,18 +112,42 @@ main(int argc, char* argv[])
     // for LTE-only simulations always use /ChannelList/0 which is the downlink channel
     Ptr<RadioEnvironmentMapHelper> remHelper = CreateObject<RadioEnvironmentMapHelper>();
     remHelper->SetAttribute("ChannelPath", StringValue("/ChannelList/0"));
-    remHelper->SetAttribute("OutputFile", StringValue("rem.out"));
-    remHelper->SetAttribute("XMin", DoubleValue(-300.0));
-    remHelper->SetAttribute("XMax", DoubleValue(300.0));
-    remHelper->SetAttribute("YMin", DoubleValue(-50.0));
-    remHelper->SetAttribute("YMax", DoubleValue(300.0));
-    remHelper->SetAttribute("XRes", UintegerValue(800));
-    remHelper->SetAttribute("YRes", UintegerValue(600));
+    remHelper->SetAttribute("OutputFile", StringValue("rem_" + scenario + ".out"));
+    remHelper->SetAttribute("XMin", DoubleValue(-15.0));
+    remHelper->SetAttribute("XMax", DoubleValue(25.0));
+    remHelper->SetAttribute("YMin", DoubleValue(-15.0));
+    remHelper->SetAttribute("YMax", DoubleValue(25.0));
+    remHelper->SetAttribute("XRes", UintegerValue(1000));
+    remHelper->SetAttribute("YRes", UintegerValue(1000));
     remHelper->SetAttribute("Z", DoubleValue(0.0));
     remHelper->Install();
 
     Simulator::Run();
 
     Simulator::Destroy();
+}
+
+int
+main(int argc, char* argv[])
+{
+    std::string scenario = "LOS";
+
+    CommandLine cmd(__FILE__);
+    cmd.AddValue("scenario", "Scenario to run: LOS, IRS, IRS+LOS", scenario);
+
+    cmd.Parse(argc, argv);
+
+    if (scenario == "LOS")
+    {
+        RunScenario("LOS");
+    }
+    else if (scenario == "IRS")
+    {
+        RunScenario("IRS");
+    }
+    else if (scenario == "IRS+LOS")
+    {
+        RunScenario("IRS+LOS");
+    }
     return 0;
 }
