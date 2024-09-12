@@ -297,23 +297,21 @@ IrsPropagationLossModelHelperFunctionsTestCase::DoRun()
     NS_TEST_EXPECT_MSG_EQ(angles.first, -1, "B is on wrong side of the IRS");
 
     // Test the Calculation of irs paths
-    // NS_TEST_EXPECT_MSG_EQ(
-    //     IrsPathsTest({Vector(0, 1, 0), Vector(0, -1, 0)},
-    //                  {Vector(0.0, 0.0, 0.0), Vector(2.0, 2.0, 0.0)}),
-    //     4,
-    //     "Two IRS nodes facing each other");
-    //
-    // NS_TEST_EXPECT_MSG_EQ(
-    //     IrsPathsTest({Vector(0, 1, 0), Vector(0, 1, 0)},
-    //                  {Vector(0.0, 0.0, 0.0), Vector(2.0, 2.0, 0.0)}),
-    //     2,
-    //     "Two IRS nodes not facing each other");
-    //
-    // NS_TEST_EXPECT_MSG_EQ(
-    //     IrsPathsTest({Vector(0, 1, 0), Vector(0, -1, 0), Vector(0, -1, 0)},
-    //                  {Vector(0.0, 0.0, 0.0), Vector(2.0, 2.0, 0.0), Vector(4.0, 2.0, 0.0)}),
-    //     9,
-    //     "Three IRS nodes two facing in same direction on in opposite");
+    NS_TEST_EXPECT_MSG_EQ(IrsPathsTest({Vector(0, 1, 0), Vector(0, -1, 0)},
+                                       {Vector(0.0, 0.0, 0.0), Vector(2.0, 2.0, 0.0)}),
+                          4,
+                          "Two IRS nodes facing each other");
+
+    NS_TEST_EXPECT_MSG_EQ(IrsPathsTest({Vector(0, 1, 0), Vector(0, 1, 0)},
+                                       {Vector(0.0, 0.0, 0.0), Vector(2.0, 2.0, 0.0)}),
+                          2,
+                          "Two IRS nodes not facing each other");
+
+    NS_TEST_EXPECT_MSG_EQ(
+        IrsPathsTest({Vector(0, 1, 0), Vector(0, -1, 0), Vector(0, -1, 0)},
+                     {Vector(0.0, 0.0, 0.0), Vector(2.0, 2.0, 0.0), Vector(4.0, 2.0, 0.0)}),
+        9,
+        "Three IRS nodes two facing in same direction on in opposite");
 
     NS_TEST_EXPECT_MSG_EQ(
         IrsPathsTest({Vector(1, 1, 0), Vector(1, -1, 0), Vector(-1, -1, 0)},
@@ -321,11 +319,14 @@ IrsPropagationLossModelHelperFunctionsTestCase::DoRun()
         15,
         "Three IRS nodes two facing in same direction on in opposite");
 
-    // NS_TEST_EXPECT_MSG_EQ(
-    //     IrsPathsTest({Vector(1, 1, 0), Vector(1, -1, 0), Vector(-1, -1, 0), Vector(-1, 11, 0)},
-    //                  {Vector(0.0, 0.0, 0.0), Vector(0.0, 2.0, 0.0), Vector(2.0, 2.0, 0.0), Vector(2.0, 0.0, 0.0)}),
-    //     64,
-    //     "Three IRS nodes two facing in same direction on in opposite");
+    NS_TEST_EXPECT_MSG_EQ(
+        IrsPathsTest({Vector(1, 1, 0), Vector(1, -1, 0), Vector(-1, -1, 0), Vector(-1, 11, 0)},
+                     {Vector(0.0, 0.0, 0.0),
+                      Vector(0.0, 2.0, 0.0),
+                      Vector(2.0, 2.0, 0.0),
+                      Vector(2.0, 0.0, 0.0)}),
+        64,
+        "Three IRS nodes two facing in same direction on in opposite");
 }
 
 /**
