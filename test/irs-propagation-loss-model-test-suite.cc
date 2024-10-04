@@ -184,16 +184,6 @@ IrsPropagationLossModelTestCase::DoRun()
 
         NS_TEST_EXPECT_MSG_EQ_TOL(resultdBm, etsidBm, tolerance, "Got unexpected rcv power");
     }
-
-    // out of range
-    // irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/IRS_400_IN135_OUT2_FREQ5.21GHz_constructive.csv");
-    // irsHelper.Install(irsNode);
-    //
-    // a->SetPosition(Vector(1, 1, 0));
-    // b->SetPosition(Vector(-1, 1, 0));
-    // double resultdBm = lossModel->CalcRxPower(txPowerDbm, a, b);
-    //
-    // NS_TEST_ASSERT_MSG_EQ(std::isinf(resultdBm), true, "Should not be in LoS");
 }
 
 /**
@@ -311,13 +301,13 @@ IrsPropagationLossModelHelperFunctionsTestCase::DoRun()
         IrsPathsTest({Vector(0, 1, 0), Vector(0, -1, 0), Vector(0, -1, 0)},
                      {Vector(0.0, 0.0, 0.0), Vector(2.0, 2.0, 0.0), Vector(4.0, 2.0, 0.0)}),
         9,
-        "Three IRS nodes two facing in same direction on in opposite");
+        "Three IRS nodes two facing in same direction one in opposite");
 
     NS_TEST_EXPECT_MSG_EQ(
         IrsPathsTest({Vector(1, 1, 0), Vector(1, -1, 0), Vector(-1, -1, 0)},
                      {Vector(0.0, 0.0, 0.0), Vector(0.0, 2.0, 0.0), Vector(2.0, 2.0, 0.0)}),
         15,
-        "Three IRS nodes two facing in same direction on in opposite");
+        "Three IRS nodes facing each other");
 
     NS_TEST_EXPECT_MSG_EQ(
         IrsPathsTest({Vector(1, 1, 0), Vector(1, -1, 0), Vector(-1, -1, 0), Vector(-1, 11, 0)},
@@ -326,7 +316,7 @@ IrsPropagationLossModelHelperFunctionsTestCase::DoRun()
                       Vector(2.0, 2.0, 0.0),
                       Vector(2.0, 0.0, 0.0)}),
         64,
-        "Three IRS nodes two facing in same direction on in opposite");
+        "Four IRS nodes facing each other");
 }
 
 /**

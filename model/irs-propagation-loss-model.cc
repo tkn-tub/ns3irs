@@ -281,25 +281,19 @@ IrsPropagationLossModel::CalcIrsPaths()
     };
 
     // Generate all possible paths considering order
-    std::vector<Ptr<Node>> irsNodes;
-    for (auto irsNode = m_irsNodes->Begin(); irsNode != m_irsNodes->End(); irsNode++)
+    for (uint32_t pathLength = 1; pathLength <= m_irsNodes->GetN(); ++pathLength)
     {
-        irsNodes.push_back(*irsNode);
-    }
-
-    for (uint32_t pathLength = 1; pathLength <= irsNodes.size(); ++pathLength)
-    {
-        std::vector<bool> v(irsNodes.size());
+        std::vector<bool> v(m_irsNodes->GetN());
         std::fill(v.end() - pathLength, v.end(), true);
 
         do
         {
             std::vector<Ptr<Node>> currentPath;
-            for (uint32_t i = 0; i < irsNodes.size(); ++i)
+            for (uint32_t i = 0; i < m_irsNodes->GetN(); ++i)
             {
                 if (v[i])
                 {
-                    currentPath.push_back(irsNodes[i]);
+                    currentPath.push_back(m_irsNodes->Get(i));
                 }
             }
 
