@@ -1,6 +1,6 @@
 % Parameters
-Nx = 20; % Number of elements in x-direction
-Ny = 20; % Number of elements in y-direction
+Nx = 10; % Number of elements in x-direction
+Ny = 10; % Number of elements in y-direction
 az = 135; % Azimuth angle (in degrees)
 el = 10; % Elevation angle (in degrees)
 fc = 5.21e9; % Carrier frequency in Hz
@@ -25,7 +25,6 @@ posSelf = [x; y; z];
 
 % wave vector
 k = (2*pi/lambda) * [cosd(el)*cosd(az); cosd(el)*sind(az); sind(el)];
-k = (2*pi/lambda) * [cosd(el)*cosd(az); cosd(el)*sind(az); sind(el)];
 
 % steering vector calc
 stvSelf = zeros(Nx*Ny, 1);
@@ -45,4 +44,24 @@ postions = posSelf == posURA;
 disp(isequal(stvSelf, stvURA));
 steering = stvSelf == stvURA;
 % unequallity seems to be floating point errors
+
+
+% Create a radiator object
+collector = phased.Collector('Sensor', ura, 'OperatingFrequency', fc);
+radiator = phased.Radiator('Sensor', ura, 'OperatingFrequency', fc);
+
+% Define a signal to radiate
+signal = ones(1e3,1);  % Example signal
+
+g = stv(fc, [30;0]);
+hr = stv(fc, [30;0]);
+
+rcoeff = exp(1i*(-angle(hr)-angle(g)));
+
+% Radiate the signal toward 30 degrees azimuth
+collectedSignal = collector(signal, [30;0]);
+rcoeffSignal = collectedSignal.*rcoeff.';
+radiatedSignal = radiator(rcoeffSignal, [30;0]);
+
+bandpower(radiatedSignal)
 
