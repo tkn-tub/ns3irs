@@ -169,8 +169,8 @@ IrsEntry
 IrsSpectrumModel::GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const
 {
     return GetIrsEntry(Angles(DegreesToRadians(in_angle), 0),
-                Angles(DegreesToRadians(out_angle), 0),
-                m_lambda);
+                       Angles(DegreesToRadians(out_angle), 0),
+                       m_lambda);
 }
 
 void

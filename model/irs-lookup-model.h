@@ -21,6 +21,7 @@
 #define IRS_H
 
 #include "irs-model.h"
+
 #include "ns3/irs-lookup-helper.h"
 #include "ns3/object.h"
 #include "ns3/vector.h"

@@ -20,9 +20,9 @@
 #ifndef IRS_MODEL_H
 #define IRS_MODEL_H
 
+#include "ns3/angles.h"
 #include "ns3/object.h"
 #include "ns3/vector.h"
-#include "ns3/angles.h"
 
 /**
  * \defgroup irs Description of the irs

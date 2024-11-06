@@ -19,11 +19,12 @@
 
 #include "irs-propagation-loss-model.h"
 
+#include "irs-model.h"
+
 #include "ns3/angles.h"
 #include "ns3/channel.h"
 #include "ns3/constant-position-mobility-model.h"
 #include "ns3/double.h"
-#include "ns3/irs-model.h"
 #include "ns3/mobility-model.h"
 #include "ns3/object-factory.h"
 #include "ns3/pointer.h"
@@ -360,9 +361,8 @@ IrsPropagationLossModel::CalcPath(const IrsPath& path,
         }
 
         // Get IRS impact from lookuptable
-        IrsEntry modifier =
-            irs->GetObject<IrsModel>()->GetIrsEntry(std::round(angles.first),
-                                                                 std::round(angles.second));
+        IrsEntry modifier = irs->GetObject<IrsModel>()->GetIrsEntry(std::round(angles.first),
+                                                                    std::round(angles.second));
         NS_LOG_INFO("IRS Gain (dBm): " << modifier.gain
                                        << " | IRS phase shift (radians): " << modifier.phase_shift);
         // add path lenght and phase shift

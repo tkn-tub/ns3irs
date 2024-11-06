@@ -19,7 +19,8 @@
 
 #include "irs-lookup-model.h"
 
-#include "ns3/irs-model.h"
+#include "irs-model.h"
+
 #include "ns3/pointer.h"
 
 #include <cstdint>

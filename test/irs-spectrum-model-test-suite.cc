@@ -17,8 +17,8 @@
 
 #include "ns3/abort.h"
 #include "ns3/config.h"
-#include "ns3/irs.h"
 #include "ns3/irs-spectrum-model.h"
+#include "ns3/irs.h"
 #include "ns3/log.h"
 #include "ns3/node-container.h"
 #include "ns3/test.h"

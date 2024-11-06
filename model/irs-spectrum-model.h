@@ -49,7 +49,11 @@ class IrsSpectrumModel : public IrsModel
     IrsEntry GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const override;
     IrsEntry GetIrsEntry(Angles in, Angles out, double lambda) const override;
 
-    void CalcRCoeffs(double dApSta, double dApIrsSta, Angles inAngle, Angles outAngle, double delta);
+    void CalcRCoeffs(double dApSta,
+                     double dApIrsSta,
+                     Angles inAngle,
+                     Angles outAngle,
+                     double delta);
 
     void SetN(std::tuple<uint16_t, uint16_t> N);
     std::tuple<uint16_t, uint16_t> GetN() const;
@@ -89,8 +93,6 @@ class IrsSpectrumModel : public IrsModel
     double m_frequency;
     double m_lambda;
     Eigen::VectorXcd m_rcoeffs;
-
-
 };
 
 } // namespace ns3
