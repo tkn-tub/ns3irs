@@ -207,9 +207,11 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
 
     if (scenario == "LOS")
     {
-        wifiChannel.AddPropagationLoss("ns3::LogDistancePropagationLossModel", "Exponent", DoubleValue(2));
-        // wifiChannel.AddPropagationLoss("ns3::FriisPropagationLossModel", "Frequency", DoubleValue(5.21e9));
-
+        wifiChannel.AddPropagationLoss("ns3::LogDistancePropagationLossModel",
+                                       "Exponent",
+                                       DoubleValue(2));
+        // wifiChannel.AddPropagationLoss("ns3::FriisPropagationLossModel", "Frequency",
+        // DoubleValue(5.21e9));
     }
     else if (scenario == "IRS")
     {
@@ -223,7 +225,8 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
         // Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
         // irsLossModel->SetFrequency(5.21e9);
 
-        Ptr<LogDistancePropagationLossModel> irsLossModel = CreateObject<LogDistancePropagationLossModel>();
+        Ptr<LogDistancePropagationLossModel> irsLossModel =
+            CreateObject<LogDistancePropagationLossModel>();
         irsLossModel->SetPathLossExponent(2);
         wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
                                        "IrsNodes",
@@ -244,7 +247,8 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
         irsHelper.Install(irsNode);
         // Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
         // irsLossModel->SetFrequency(5.21e9);
-        Ptr<LogDistancePropagationLossModel> irsLossModel = CreateObject<LogDistancePropagationLossModel>();
+        Ptr<LogDistancePropagationLossModel> irsLossModel =
+            CreateObject<LogDistancePropagationLossModel>();
         irsLossModel->SetPathLossExponent(2);
         Ptr<LogDistancePropagationLossModel> losLossModel =
             CreateObject<LogDistancePropagationLossModel>();
