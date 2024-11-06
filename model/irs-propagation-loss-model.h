@@ -147,13 +147,6 @@ class IrsPropagationLossModel : public PropagationLossModel
                                          ns3::Vector irs,
                                          ns3::Vector irsNormal) const;
 
-    /**
-     * Wraps angle to the range -pi to pi
-     * \param angle angle in radians
-     * \return angle in radians (range -pi to pi)
-     */
-    double WrapToPi(double angle) const;
-
     void CalcIrsPaths();
 
     std::complex<double> CalcPath(const IrsPath& path,

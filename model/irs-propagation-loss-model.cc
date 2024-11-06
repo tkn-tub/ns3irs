@@ -234,25 +234,6 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector a,
     return std::make_pair(thetaIncDeg, thetaRefDeg);
 }
 
-double
-IrsPropagationLossModel::WrapToPi(double angle) const
-{
-    // Wrap the angle to the range -2*pi to 2*pi
-    angle = fmod(angle, 2.0 * M_PI);
-
-    // Wrap the angle to the range -pi to pi
-    if (angle > M_PI)
-    {
-        angle -= 2.0 * M_PI;
-    }
-    else if (angle < -M_PI)
-    {
-        angle += 2.0 * M_PI;
-    }
-
-    return angle;
-}
-
 void
 IrsPropagationLossModel::CalcIrsPaths()
 {
