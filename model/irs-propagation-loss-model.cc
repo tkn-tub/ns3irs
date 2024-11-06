@@ -19,12 +19,11 @@
 
 #include "irs-propagation-loss-model.h"
 
-#include "irs.h"
-
 #include "ns3/angles.h"
 #include "ns3/channel.h"
 #include "ns3/constant-position-mobility-model.h"
 #include "ns3/double.h"
+#include "ns3/irs-model.h"
 #include "ns3/mobility-model.h"
 #include "ns3/object-factory.h"
 #include "ns3/pointer.h"
@@ -262,8 +261,8 @@ IrsPropagationLossModel::CalcIrsPaths()
     auto facingEachOther = [](Ptr<Node> irs1, Ptr<Node> irs2) {
         auto mobility1 = irs1->GetObject<MobilityModel>();
         auto mobility2 = irs2->GetObject<MobilityModel>();
-        auto irsObj1 = irs1->GetObject<Irs>();
-        auto irsObj2 = irs2->GetObject<Irs>();
+        auto irsObj1 = irs1->GetObject<IrsModel>();
+        auto irsObj2 = irs2->GetObject<IrsModel>();
 
         NS_ASSERT_MSG(mobility1 && mobility2, "Mobility model not set for IRS node");
         NS_ASSERT_MSG(irsObj1 && irsObj2, "IRS object not set for node");
@@ -352,7 +351,7 @@ IrsPropagationLossModel::CalcPath(const IrsPath& path,
             CalcAngles(prev->GetPosition(),
                        next->GetPosition(),
                        irs->GetObject<MobilityModel>()->GetPosition(),
-                       irs->GetObject<Irs>()->GetDirection());
+                       irs->GetObject<IrsModel>()->GetDirection());
 
         // Skip if IRS is not in line of sight
         if (angles.first < 0 || angles.second < 0)
@@ -362,7 +361,7 @@ IrsPropagationLossModel::CalcPath(const IrsPath& path,
 
         // Get IRS impact from lookuptable
         IrsEntry modifier =
-            irs->GetObject<Irs>()->GetLookupTable()->GetIrsEntry(std::round(angles.first),
+            irs->GetObject<IrsModel>()->GetIrsEntry(std::round(angles.first),
                                                                  std::round(angles.second));
         NS_LOG_INFO("IRS Gain (dBm): " << modifier.gain
                                        << " | IRS phase shift (radians): " << modifier.phase_shift);

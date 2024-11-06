@@ -17,9 +17,8 @@
 
 #include "ns3/config-store.h"
 #include "ns3/core-module.h"
-#include "ns3/irs-helper.h"
+#include "ns3/irs-lookup-helper.h"
 #include "ns3/irs-propagation-loss-model.h"
-#include "ns3/irs.h"
 #include "ns3/lte-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/network-module.h"
@@ -41,7 +40,7 @@ RunScenario(std::string scenario)
     ueNodes.Create(1);
     irsNodes.Create(1);
 
-    IrsHelper irsHelper;
+    IrsLookupHelper irsHelper;
     irsHelper.SetDirection(Vector(1, 1, 0));
     irsHelper.SetLookupTable(
         "contrib/irs/examples/lookuptables/IRS_400_IN153_OUT27_FREQ1.50GHz_rem.csv");

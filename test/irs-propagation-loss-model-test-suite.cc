@@ -19,7 +19,7 @@
 #include "ns3/config.h"
 #include "ns3/constant-position-mobility-model.h"
 #include "ns3/double.h"
-#include "ns3/irs-helper.h"
+#include "ns3/irs-lookup-helper.h"
 #include "ns3/irs-propagation-loss-model.h"
 #include "ns3/log.h"
 #include "ns3/mobility-helper.h"
@@ -137,7 +137,7 @@ IrsPropagationLossModelTestCase::DoRun()
     NodeContainer irsNode;
     irsNode.Create(1);
 
-    IrsHelper irsHelper;
+    IrsLookupHelper irsHelper;
     irsHelper.SetDirection(Vector(0, 1, 0));
 
     Ptr<MobilityModel> a = CreateObject<ConstantPositionMobilityModel>();
@@ -226,7 +226,7 @@ IrsPropagationLossModelHelperFunctionsTestCase::IrsPathsTest(const std::vector<V
     irsNodes.Create(directions.size());
 
     // Create IRS helper and mobility helper
-    IrsHelper irsHelper;
+    IrsLookupHelper irsHelper;
     MobilityHelper mobility;
     Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
 

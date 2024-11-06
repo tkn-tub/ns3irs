@@ -17,39 +17,40 @@
  * Author: Jakob Rühlow <j.ruehlow@campus.tu-berlin.de>
  */
 
-#ifndef IRS_HELPER_H
-#define IRS_HELPER_H
+#ifndef IRS_H
+#define IRS_H
 
-#include "irs-lookup-helper.h"
+#include "irs-model.h"
+#include "ns3/irs-lookup-helper.h"
+#include "ns3/object.h"
+#include "ns3/vector.h"
 
-#include "ns3/irs.h"
-#include "ns3/node-container.h"
-#include "ns3/object-factory.h"
-
+/**
+ * \defgroup irs Description of the irs
+ */
 namespace ns3
 {
 
-class IrsHelper
+class IrsLookupModel : public IrsModel
 {
   public:
-    IrsHelper();
-    ~IrsHelper();
+    /**
+     * \brief Get the type ID.
+     * \return the object TypeId
+     */
+    static TypeId GetTypeId();
+    IrsLookupModel();
 
-    void Install(Ptr<Node> node) const;
-    void Install(std::string nodeName) const;
-    void Install(NodeContainer container) const;
-    void InstallAll() const;
+    IrsEntry GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const override;
+    IrsEntry GetIrsEntry(Angles in, Angles out, double lambda) const override;
 
-    void SetLookupTable(std::string filename);
     void SetLookupTable(Ptr<IrsLookupTable> table);
-
-    void SetDirection(Vector direction);
+    Ptr<IrsLookupTable> GetLookupTable() const;
 
   private:
-    ObjectFactory m_irs;
     Ptr<IrsLookupTable> m_irsLookupTable;
-    Vector m_direction;
 };
+
 } // namespace ns3
 
-#endif /* IRS_HELPER_H */
+#endif /* IRS_H */

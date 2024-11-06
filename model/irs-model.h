@@ -17,13 +17,12 @@
  * Author: Jakob Rühlow <j.ruehlow@campus.tu-berlin.de>
  */
 
-#ifndef IRS_H
-#define IRS_H
-
-#include "../helper/irs-lookup-helper.h"
+#ifndef IRS_MODEL_H
+#define IRS_MODEL_H
 
 #include "ns3/object.h"
 #include "ns3/vector.h"
+#include "ns3/angles.h"
 
 /**
  * \defgroup irs Description of the irs
@@ -31,7 +30,13 @@
 namespace ns3
 {
 
-class Irs : public Object
+struct IrsEntry
+{
+    double gain;
+    double phase_shift;
+};
+
+class IrsModel : public Object
 {
   public:
     /**
@@ -39,21 +44,23 @@ class Irs : public Object
      * \return the object TypeId
      */
     static TypeId GetTypeId();
-    Irs();
+    IrsModel();
+    ~IrsModel() override;
 
-    IrsEntry GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const;
+    // Delete copy constructor and assignment operator to avoid misuse
+    IrsModel(const IrsModel&) = delete;
+    IrsModel& operator=(const IrsModel&) = delete;
 
-    void SetLookupTable(Ptr<IrsLookupTable> table);
-    Ptr<IrsLookupTable> GetLookupTable() const;
+    virtual IrsEntry GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const = 0;
+    virtual IrsEntry GetIrsEntry(Angles in, Angles out, double lambda) const = 0;
 
     void SetDirection(const Vector& direction);
     Vector GetDirection() const;
 
   private:
-    Ptr<IrsLookupTable> m_irsLookupTable;
     Vector m_direction;
 };
 
 } // namespace ns3
 
-#endif /* IRS_H */
+#endif /* IRS_MODEL_H */

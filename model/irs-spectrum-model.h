@@ -20,7 +20,7 @@
 #ifndef IRS_SPECTRUM_MODEL_H
 #define IRS_SPECTRUM_MODEL_H
 
-#include "../helper/irs-lookup-helper.h"
+#include "irs-model.h"
 
 #include "ns3/angles.h"
 #include "ns3/object.h"
@@ -36,7 +36,7 @@
 namespace ns3
 {
 
-class IrsSpectrumModel : public Object
+class IrsSpectrumModel : public IrsModel
 {
   public:
     /**
@@ -46,18 +46,10 @@ class IrsSpectrumModel : public Object
     static TypeId GetTypeId();
     IrsSpectrumModel();
 
-    IrsEntry GetIrsEntry(Angles in, Angles out, double freq) const;
+    IrsEntry GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const override;
+    IrsEntry GetIrsEntry(Angles in, Angles out, double lambda) const override;
 
-    void CalcRCoeffs(double dApSta, double dApIrsSta, double delta);
-
-    void SetDirection(const Vector& direction);
-    Vector GetDirection() const;
-
-    void SetIngoingAngles(const Angles& angles);
-    Angles GetIngoingAngles() const;
-
-    void SetOutgoingAngles(const Angles& angles);
-    Angles GetOutgoingAngles() const;
+    void CalcRCoeffs(double dApSta, double dApIrsSta, Angles inAngle, Angles outAngle, double delta);
 
     void SetN(std::tuple<uint16_t, uint16_t> N);
     std::tuple<uint16_t, uint16_t> GetN() const;
@@ -69,6 +61,7 @@ class IrsSpectrumModel : public Object
     uint16_t GetSamples() const;
 
     Eigen::VectorXcd GetRcoeffs() const;
+
     /**
      * \param frequency (Hz)
      *
@@ -88,23 +81,16 @@ class IrsSpectrumModel : public Object
     Eigen::VectorXcd CalcSteeringvector(Angles angle, double lambda) const;
     double CalcPhaseShift(double dApSta, double dApIrsSta, double delta) const;
 
-    Vector m_direction;
-
-    double m_frequency;
-    double m_lambda;
-
     uint16_t m_Nr;
     uint16_t m_Nc;
-
     double m_dr;
     double m_dc;
-
     uint16_t m_samples;
-
-    Angles m_ingoing = Angles(0, 0);
-    Angles m_outgoing = Angles(0, 0);
-
+    double m_frequency;
+    double m_lambda;
     Eigen::VectorXcd m_rcoeffs;
+
+
 };
 
 } // namespace ns3

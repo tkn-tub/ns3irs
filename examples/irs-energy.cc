@@ -24,7 +24,7 @@
 #include "ns3/energy-module.h"
 #include "ns3/internet-stack-helper.h"
 #include "ns3/ipv4-address-helper.h"
-#include "ns3/irs-helper.h"
+#include "ns3/irs-lookup-helper.h"
 #include "ns3/irs-propagation-loss-model.h"
 #include "ns3/irs.h"
 #include "ns3/log.h"
@@ -249,7 +249,7 @@ RunScenario(std::string scenario,
 
     if (scenario != "LOS")
     {
-        IrsHelper irsHelper;
+        IrsLookupHelper irsHelper;
         irsHelper.SetDirection(Vector(0, 1, 0));
         irsHelper.SetLookupTable(lookuptable);
         irsHelper.Install(irsNode);

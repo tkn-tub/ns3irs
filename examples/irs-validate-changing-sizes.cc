@@ -19,7 +19,7 @@
 #include "ns3/interference-helper.h"
 #include "ns3/internet-stack-helper.h"
 #include "ns3/ipv4-address-helper.h"
-#include "ns3/irs-helper.h"
+#include "ns3/irs-lookup-helper.h"
 #include "ns3/mobility-helper.h"
 #include "ns3/mobility-model.h"
 #include "ns3/node-container.h"
@@ -117,7 +117,7 @@ RunSimulation(std::string lookupTable, bool useRisOnly, double ueDistance)
     NodeContainer irs;
     irs.Create(1);
 
-    IrsHelper irsHelper;
+    IrsLookupHelper irsHelper;
     irsHelper.SetDirection(Vector(1, 0, 0));
     irsHelper.SetLookupTable("/home/jrueh/Studium/tkn_thesis/ns-3-dev/contrib/irs/matlab/" +
                              lookupTable);

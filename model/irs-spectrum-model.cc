@@ -25,8 +25,6 @@
 #include "ns3/uinteger.h"
 
 #include <cstdint>
-#include <iostream>
-#include <ostream>
 
 namespace ns3
 {
@@ -38,21 +36,9 @@ IrsSpectrumModel::GetTypeId()
 {
     static TypeId tid =
         TypeId("ns3::IrsSpectrumModel")
-            .SetParent<Object>()
-            .SetGroupName("IrsSpectrumModel")
+            .SetParent<IrsModel>()
+            .SetGroupName("IrsModel")
             .AddConstructor<IrsSpectrumModel>()
-            .AddAttribute("InAngle",
-                          "Ingoing angle Irs is optimized for.",
-                          AnglesValue(Angles(0.0, 0.0)),
-                          MakeAnglesAccessor(&IrsSpectrumModel::SetIngoingAngles,
-                                             &IrsSpectrumModel::GetIngoingAngles),
-                          MakeAnglesChecker())
-            .AddAttribute("OutAngle",
-                          "Outgoing angle Irs is optimized for.",
-                          AnglesValue(Angles(0.0, 0.0)),
-                          MakeAnglesAccessor(&IrsSpectrumModel::SetOutgoingAngles,
-                                             &IrsSpectrumModel::GetOutgoingAngles),
-                          MakeAnglesChecker())
             .AddAttribute(
                 "N",
                 "Number of elements. First row then column",
@@ -69,13 +55,6 @@ IrsSpectrumModel::GetTypeId()
                                                             &IrsSpectrumModel::GetSpacing),
                 MakeTupleChecker<DoubleValue, DoubleValue>(MakeDoubleChecker<double>(),
                                                            MakeDoubleChecker<double>()))
-            .AddAttribute(
-                "Frequency",
-                "The carrier frequency (in Hz) at which propagation occurs (default is 5.21 GHz).",
-                DoubleValue(5.21e9),
-                MakeDoubleAccessor(&IrsSpectrumModel::SetFrequency,
-                                   &IrsSpectrumModel::GetFrequency),
-                MakeDoubleChecker<double>())
             .AddAttribute(
                 "Samples",
                 "Amount of samples for wave.",
@@ -96,11 +75,15 @@ IrsSpectrumModel::IrsSpectrumModel()
 }
 
 void
-IrsSpectrumModel::CalcRCoeffs(double dApSta, double dApIrsSta, double delta)
+IrsSpectrumModel::CalcRCoeffs(double dApSta,
+                              double dApIrsSta,
+                              Angles inAngle,
+                              Angles outAngle,
+                              double delta)
 {
     // Calculate steering vectors and their arguments
-    Eigen::VectorXd stv_in = CalcSteeringvector(m_ingoing, m_lambda).array().arg();
-    Eigen::VectorXd stv_out = CalcSteeringvector(m_outgoing, m_lambda).array().arg();
+    Eigen::VectorXcd stv_in = CalcSteeringvector(inAngle, m_lambda).array().arg();
+    Eigen::VectorXcd stv_out = CalcSteeringvector(outAngle, m_lambda).array().arg();
     // Calculate phase shift
     double shift = CalcPhaseShift(dApSta, dApIrsSta, delta);
 
@@ -163,12 +146,8 @@ IrsSpectrumModel::CalcPhaseShift(double dApSta, double dApIrsSta, double delta) 
 }
 
 IrsEntry
-IrsSpectrumModel::GetIrsEntry(Angles in, Angles out, double freq) const
+IrsSpectrumModel::GetIrsEntry(Angles in, Angles out, double lambda) const
 {
-    // TODO: use freq
-    static const double c = 299792458.0; // speed of light in vacuum
-    double lambda = c / freq;
-
     Eigen::VectorXcd stv_in = CalcSteeringvector(in, lambda);
     Eigen::VectorXcd stv_out = CalcSteeringvector(out, lambda);
 
@@ -181,57 +160,17 @@ IrsSpectrumModel::GetIrsEntry(Angles in, Angles out, double freq) const
         10 * std::log10((signal_ref.conjugate().array() * signal_ref.array()).real().mean()) -
         10 * std::log10((signal_in.conjugate().array() * signal_in.array()).real().mean());
 
-    // TODO: wrap shift to pi
     double shift = (signal_in.array().arg() - signal_ref.array().arg()).mean();
 
     return IrsEntry(gain, shift);
 }
 
-void
-IrsSpectrumModel::SetDirection(const Vector& direction)
+IrsEntry
+IrsSpectrumModel::GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const
 {
-    // Normalize the vector
-    double m = direction.GetLength();
-    if (m != 0)
-    {
-        m_direction = Vector3D(direction.x / m, direction.y / m, direction.z / m);
-    }
-    else
-    {
-        m_direction = direction;
-    }
-}
-
-Vector
-IrsSpectrumModel::GetDirection() const
-{
-    return m_direction;
-}
-
-void
-IrsSpectrumModel::SetIngoingAngles(const Angles& angles)
-{
-    // TODO: Check bounds
-    m_ingoing = angles;
-}
-
-Angles
-IrsSpectrumModel::GetIngoingAngles() const
-{
-    return m_ingoing;
-}
-
-void
-IrsSpectrumModel::SetOutgoingAngles(const Angles& angles)
-{
-    // TODO: Check bounds
-    m_outgoing = angles;
-}
-
-Angles
-IrsSpectrumModel::GetOutgoingAngles() const
-{
-    return m_outgoing;
+    return GetIrsEntry(Angles(DegreesToRadians(in_angle), 0),
+                Angles(DegreesToRadians(out_angle), 0),
+                m_lambda);
 }
 
 void
@@ -239,6 +178,7 @@ IrsSpectrumModel::SetN(std::tuple<uint16_t, uint16_t> N)
 {
     m_Nr = std::get<0>(N);
     m_Nc = std::get<1>(N);
+    NS_ABORT_MSG_UNLESS(m_Nr > 0 && m_Nc > 0, "Amount of elements should be greater zero.");
 }
 
 std::tuple<uint16_t, uint16_t>
@@ -252,6 +192,7 @@ IrsSpectrumModel::SetSpacing(std::tuple<double, double> d)
 {
     m_dr = std::get<0>(d);
     m_dc = std::get<1>(d);
+    NS_ABORT_MSG_UNLESS(m_dr > 0 && m_dc > 0, "Element spacing should be greater zero.");
 }
 
 std::tuple<double, double>
@@ -263,7 +204,7 @@ IrsSpectrumModel::GetSpacing() const
 void
 IrsSpectrumModel::SetFrequency(double frequency)
 {
-    NS_ASSERT_MSG(frequency > 0, "Frequency should be greater zero (in Hz)");
+    NS_ABORT_MSG_UNLESS(frequency > 0, "Frequency should be greater zero (in Hz)");
     m_frequency = frequency;
     static const double c = 299792458.0; // speed of light in vacuum
     m_lambda = c / frequency;

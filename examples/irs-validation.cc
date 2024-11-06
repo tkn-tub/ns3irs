@@ -23,9 +23,8 @@
 #include "ns3/double.h"
 #include "ns3/internet-stack-helper.h"
 #include "ns3/ipv4-address-helper.h"
-#include "ns3/irs-helper.h"
+#include "ns3/irs-lookup-helper.h"
 #include "ns3/irs-propagation-loss-model.h"
-#include "ns3/irs.h"
 #include "ns3/log.h"
 #include "ns3/mobility-helper.h"
 #include "ns3/mobility-model.h"
@@ -208,19 +207,24 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
 
     if (scenario == "LOS")
     {
-        wifiChannel.AddPropagationLoss("ns3::LogDistancePropagationLossModel");
+        wifiChannel.AddPropagationLoss("ns3::LogDistancePropagationLossModel", "Exponent", DoubleValue(2));
+        // wifiChannel.AddPropagationLoss("ns3::FriisPropagationLossModel", "Frequency", DoubleValue(5.21e9));
+
     }
     else if (scenario == "IRS")
     {
         irsNode.Create(1);
-        IrsHelper irsHelper;
+        IrsLookupHelper irsHelper;
         irsHelper.SetDirection(Vector(0, 1, 0));
         irsHelper.SetLookupTable(
             "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv");
         irsHelper.Install(irsNode);
 
-        Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
-        irsLossModel->SetFrequency(5.21e9);
+        // Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
+        // irsLossModel->SetFrequency(5.21e9);
+
+        Ptr<LogDistancePropagationLossModel> irsLossModel = CreateObject<LogDistancePropagationLossModel>();
+        irsLossModel->SetPathLossExponent(2);
         wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
                                        "IrsNodes",
                                        PointerValue(&irsNode),
@@ -228,18 +232,20 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
                                        PointerValue(irsLossModel),
                                        "Frequency",
                                        DoubleValue(5.21e9));
-        positionAlloc->Add(Vector(1.35, -1.35, 0));
+        positionAlloc->Add(Vector(0.7, -0.7, 0));
     }
     else if (scenario == "IRSConstructive")
     {
         irsNode.Create(1);
-        IrsHelper irsHelper;
+        IrsLookupHelper irsHelper;
         irsHelper.SetDirection(Vector(0, 1, 0));
         irsHelper.SetLookupTable(
             "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_constructive.csv");
         irsHelper.Install(irsNode);
-        Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
-        irsLossModel->SetFrequency(5.21e9);
+        // Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
+        // irsLossModel->SetFrequency(5.21e9);
+        Ptr<LogDistancePropagationLossModel> irsLossModel = CreateObject<LogDistancePropagationLossModel>();
+        irsLossModel->SetPathLossExponent(2);
         Ptr<LogDistancePropagationLossModel> losLossModel =
             CreateObject<LogDistancePropagationLossModel>();
         wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
@@ -251,12 +257,12 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
                                        PointerValue(losLossModel),
                                        "Frequency",
                                        DoubleValue(5.21e9));
-        positionAlloc->Add(Vector(1.35, -1.35, 0));
+        positionAlloc->Add(Vector(0.7, -0.7, 0));
     }
     else if (scenario == "IRSDestructive")
     {
         irsNode.Create(1);
-        IrsHelper irsHelper;
+        IrsLookupHelper irsHelper;
         irsHelper.SetDirection(Vector(0, 1, 0));
         irsHelper.SetLookupTable(
             "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT88_FREQ5.21GHz_destructive.csv");
@@ -279,7 +285,7 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
     else if (scenario == "MultiIRS")
     {
         irsNode.Create(2);
-        IrsHelper irsHelper;
+        IrsLookupHelper irsHelper;
         irsHelper.SetDirection(Vector(0, -1, 0));
         irsHelper.SetLookupTable(
             "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT84_FREQ5.21GHz_multiIrs1.csv");
@@ -371,7 +377,7 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
         MakeCallback(&ScenarioStatistics::TxCallback, &stats));
 
     // Run simulation
-    double simTime = 30;
+    double simTime = 10;
     Simulator::Stop(Seconds(simTime));
     Simulator::Run();
 

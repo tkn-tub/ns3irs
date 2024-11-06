@@ -24,9 +24,8 @@
 #include "ns3/double.h"
 #include "ns3/internet-stack-helper.h"
 #include "ns3/ipv4-address-helper.h"
-#include "ns3/irs-helper.h"
+#include "ns3/irs-lookup-helper.h"
 #include "ns3/irs-propagation-loss-model.h"
-#include "ns3/irs.h"
 #include "ns3/log.h"
 #include "ns3/mobility-helper.h"
 #include "ns3/mobility-model.h"
@@ -236,7 +235,7 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
 
     wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
 
-    IrsHelper irsHelper;
+    IrsLookupHelper irsHelper;
     irsHelper.SetDirection(Vector(0, 1, 0));
     irsHelper.SetLookupTable(
         "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT6_FREQ5.21GHz_mobility.csv");

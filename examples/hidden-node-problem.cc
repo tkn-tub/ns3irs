@@ -34,9 +34,8 @@
 #include "ns3/internet-stack-helper.h"
 #include "ns3/ipv4-address-helper.h"
 #include "ns3/ipv4-flow-classifier.h"
-#include "ns3/irs-helper.h"
+#include "ns3/irs-lookup-helper.h"
 #include "ns3/irs-propagation-loss-model.h"
-#include "ns3/irs.h"
 #include "ns3/mobility-helper.h"
 #include "ns3/on-off-helper.h"
 #include "ns3/propagation-delay-model.h"
@@ -122,7 +121,7 @@ RunSimulation(bool useIRS,
     Ptr<YansWifiChannel> wifiChannel = CreateObject<YansWifiChannel>();
     if (useIRS)
     {
-        IrsHelper irsHelper;
+        IrsLookupHelper irsHelper;
         irsHelper.SetDirection(Vector(0, 1, 0));
         irsHelper.SetLookupTable(
             "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT89_FREQ5.18GHz_hidden_node.csv");
