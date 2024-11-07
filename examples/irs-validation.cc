@@ -216,8 +216,8 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
         irsNode.Create(1);
         IrsLookupHelper irsHelper;
         irsHelper.SetDirection(Vector(0, 1, 0));
-        irsHelper.SetLookupTable(
-            "contrib/irs/examples/lookuptables/validation/IRS_400_IN135_OUT89_FREQ5.15GHz_constructive.csv");
+        irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/validation/"
+                                 "IRS_400_IN135_OUT89_FREQ5.15GHz_constructive.csv");
         irsHelper.Install(irsNode);
 
         Ptr<LogDistancePropagationLossModel> irsLossModel =
@@ -238,8 +238,8 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
         irsNode.Create(1);
         IrsLookupHelper irsHelper;
         irsHelper.SetDirection(Vector(0, 1, 0));
-        irsHelper.SetLookupTable(
-            "contrib/irs/examples/lookuptables/validation/IRS_400_IN135_OUT89_FREQ5.15GHz_constructive.csv");
+        irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/validation/"
+                                 "IRS_400_IN135_OUT89_FREQ5.15GHz_constructive.csv");
         irsHelper.Install(irsNode);
 
         Ptr<LogDistancePropagationLossModel> irsLossModel =
@@ -265,8 +265,8 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
         irsNode.Create(1);
         IrsLookupHelper irsHelper;
         irsHelper.SetDirection(Vector(0, 1, 0));
-        irsHelper.SetLookupTable(
-            "contrib/irs/examples/lookuptables/validation/IRS_400_IN139_OUT89_FREQ5.15GHz_destructive.csv");
+        irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/validation/"
+                                 "IRS_400_IN139_OUT89_FREQ5.15GHz_destructive.csv");
         irsHelper.Install(irsNode);
 
         Ptr<LogDistancePropagationLossModel> irsLossModel =
@@ -292,12 +292,12 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
         irsNode.Create(2);
         IrsLookupHelper irsHelper;
         irsHelper.SetDirection(Vector(0, -1, 0));
-        irsHelper.SetLookupTable(
-            "contrib/irs/examples/lookuptables/validation/IRS_400_IN135_OUT88_FREQ5.15GHz_multiIrs1.csv");
+        irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/validation/"
+                                 "IRS_400_IN135_OUT88_FREQ5.15GHz_multiIrs1.csv");
         irsHelper.Install(irsNode.Get(0));
         irsHelper.SetDirection(Vector(0, 1, 0));
-        irsHelper.SetLookupTable(
-            "contrib/irs/examples/lookuptables/validation/IRS_400_IN92_OUT45_FREQ5.15GHz_multiIrs2.csv");
+        irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/validation/"
+                                 "IRS_400_IN92_OUT45_FREQ5.15GHz_multiIrs2.csv");
         irsHelper.Install(irsNode.Get(1));
 
         Ptr<LogDistancePropagationLossModel> losLossModel =
