@@ -22,21 +22,22 @@
 #include "irs-model.h"
 
 #include "ns3/angles.h"
-#include "ns3/channel.h"
-#include "ns3/constant-position-mobility-model.h"
+#include "ns3/assert.h"
 #include "ns3/double.h"
+#include "ns3/irs-lookup-table.h"
+#include "ns3/log.h"
 #include "ns3/mobility-model.h"
-#include "ns3/object-factory.h"
+#include "ns3/object-base.h"
+#include "ns3/object.h"
 #include "ns3/pointer.h"
 #include "ns3/random-variable-stream.h"
-#include "ns3/wifi-net-device.h"
-#include "ns3/wifi-phy.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
-#include <ostream>
+#include <limits>
+#include <stddef.h>
 #include <utility>
 
 namespace ns3

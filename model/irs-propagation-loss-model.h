@@ -22,7 +22,6 @@
 
 #include "ns3/node-container.h"
 #include "ns3/node.h"
-#include "ns3/propagation-delay-model.h"
 #include "ns3/propagation-loss-model.h"
 #include "ns3/vector.h"
 

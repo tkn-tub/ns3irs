@@ -18,13 +18,15 @@
 #include "ns3/abort.h"
 #include "ns3/config.h"
 #include "ns3/irs-spectrum-model.h"
-#include "ns3/irs.h"
+#include "ns3/irs-lookup-table.h"
+#include "ns3/irs-lookup-model.h"
 #include "ns3/log.h"
 #include "ns3/node-container.h"
 #include "ns3/test.h"
 
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <iostream>
 #include <string>
 
@@ -49,8 +51,8 @@ class IrsSpectrumModelTestCase : public TestCase
         std::tuple<uint16_t, uint16_t> N;
         std::tuple<double, double> d;
         std::string lookuptable;
-        Angles in_angle;
-        Angles out_angle;
+        uint8_t in_angle;
+        uint8_t out_angle;
         double delta;
     };
 
@@ -118,15 +120,15 @@ IrsSpectrumModelTestCase::DoRun()
     tv.lambda = 0.057541738579655;
     tv.N = {20, 20};
     tv.d = {0.028770869289827, 0.028770869289827};
-    tv.in_angle = Angles(DegreesToRadians(110), DegreesToRadians(0));
-    tv.out_angle = Angles(DegreesToRadians(69), DegreesToRadians(0));
+    tv.in_angle = 110;
+    tv.out_angle = 69;
     tv.delta = M_PI;
     tv.lookuptable =
         "contrib/irs/examples/lookuptables/IRS_400_IN110_OUT69_FREQ5.21GHz_destructive.csv";
     m_testVectors.Add(tv);
 
     Ptr<IrsSpectrumModel> irs = CreateObject<IrsSpectrumModel>();
-    Ptr<Irs> irsNormal = CreateObject<Irs>();
+    Ptr<IrsLookupModel> irsNormal = CreateObject<IrsLookupModel>();
 
     for (uint32_t i = 0; i < m_testVectors.GetN(); ++i)
     {
@@ -137,9 +139,7 @@ IrsSpectrumModelTestCase::DoRun()
         irs->SetN(tv.N);
         irs->SetSpacing(tv.d);
         irs->SetFrequency(tv.freq);
-        irs->SetIngoingAngles(tv.in_angle);
-        irs->SetOutgoingAngles(tv.out_angle);
-        irs->CalcRCoeffs(40, 42.7989, tv.delta);
+        irs->CalcRCoeffs(40, 42.7989, Angles(DegreesToRadians(tv.in_angle), DegreesToRadians(0)), Angles(DegreesToRadians(tv.out_angle), DegreesToRadians(0)), tv.delta);
 
         irsNormal->SetDirection(Vector(0, 1, 0));
         irsNormal->SetLookupTable(SetLookupTable(tv.lookuptable));

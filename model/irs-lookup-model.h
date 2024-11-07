@@ -17,14 +17,17 @@
  * Author: Jakob Rühlow <j.ruehlow@campus.tu-berlin.de>
  */
 
-#ifndef IRS_H
-#define IRS_H
+#ifndef IRS_LOOKUP_MODEL_H
+#define IRS_LOOKUP_MODEL_H
 
 #include "irs-model.h"
 
-#include "ns3/irs-lookup-helper.h"
-#include "ns3/object.h"
-#include "ns3/vector.h"
+#include "ns3/angles.h"
+#include "ns3/irs-lookup-table.h"
+#include "ns3/ptr.h"
+#include "ns3/type-id.h"
+
+#include <stdint.h>
 
 /**
  * \defgroup irs Description of the irs
@@ -54,4 +57,4 @@ class IrsLookupModel : public IrsModel
 
 } // namespace ns3
 
-#endif /* IRS_H */
+#endif /* IRS_LOOKUP_MODEL_H */

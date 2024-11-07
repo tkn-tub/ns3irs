@@ -19,7 +19,10 @@
 
 #include "irs-lookup-table.h"
 
+#include "ns3/fatal-error.h"
+
 #include <cstdint>
+#include <ostream>
 
 namespace ns3
 {

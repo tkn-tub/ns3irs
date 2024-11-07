@@ -17,13 +17,18 @@
  * Author: Jakob Rühlow <j.ruehlow@campus.tu-berlin.de>
  */
 
-#ifndef IRS_HELPER_H
-#define IRS_HELPER_H
+#ifndef IRS_LOOKUP_HELPER_H
+#define IRS_LOOKUP_HELPER_H
 
 #include "irs-lookup-table.h"
 
 #include "ns3/node-container.h"
+#include "ns3/node.h"
 #include "ns3/object-factory.h"
+#include "ns3/ptr.h"
+#include "ns3/vector.h"
+
+#include <string>
 
 namespace ns3
 {
@@ -51,4 +56,4 @@ class IrsLookupHelper
 };
 } // namespace ns3
 
-#endif /* IRS_HELPER_H */
+#endif /* IRS_LOOKUP_HELPER_H */

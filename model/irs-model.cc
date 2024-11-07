@@ -19,7 +19,9 @@
 
 #include "irs-model.h"
 
-#include "ns3/pointer.h"
+#include "ns3/abort.h"
+#include "ns3/log.h"
+#include "ns3/object-base.h"
 
 namespace ns3
 {
@@ -43,6 +45,10 @@ IrsModel::GetTypeId()
 }
 
 IrsModel::IrsModel()
+{
+}
+
+IrsModel::~IrsModel()
 {
 }
 

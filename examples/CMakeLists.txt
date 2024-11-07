@@ -75,3 +75,10 @@ build_lib_example(
         ${libwifi}
         ${liblte}
 )
+
+build_lib_example(
+    NAME generate-irs-lookuptable
+    SOURCE_FILES generate-irs-lookuptable.cc
+    LIBRARIES_TO_LINK
+        ${libirs}
+)

@@ -17,14 +17,22 @@
  * Author: Jakob Rühlow <j.ruehlow@campus.tu-berlin.de>
  */
 
-#ifndef IRS_LOOKUP_HELPER_H
-#define IRS_LOOKUP_HELPER_H
+#ifndef IRS_LOOKUP_TABLE_H
+#define IRS_LOOKUP_TABLE_H
 
-#include "ns3/irs-model.h"
 #include "ns3/object.h"
-#include "ns3/ptr.h"
+#include "ns3/type-id.h"
 
+#include <cstddef>
 #include <cstdint>
+#include <unordered_map>
+#include <utility>
+
+struct IrsEntry
+{
+    double gain;
+    double phase_shift;
+};
 
 struct hash_tuple
 {
@@ -56,4 +64,4 @@ class IrsLookupTable : public Object
     std::unordered_map<std::pair<uint8_t, uint8_t>, IrsEntry, hash_tuple> m_irsLookupTable;
 };
 } // namespace ns3
-#endif // IRS_LOOKUP_HELPER_H
+#endif // IRS_LOOKUP_TABLE_H

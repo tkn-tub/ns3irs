@@ -26,7 +26,6 @@
 #include "ns3/ipv4-address-helper.h"
 #include "ns3/irs-lookup-helper.h"
 #include "ns3/irs-propagation-loss-model.h"
-#include "ns3/irs.h"
 #include "ns3/log.h"
 #include "ns3/mobility-helper.h"
 #include "ns3/mobility-model.h"

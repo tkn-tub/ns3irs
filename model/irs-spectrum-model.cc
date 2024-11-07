@@ -19,11 +19,15 @@
 
 #include "irs-spectrum-model.h"
 
+#include "ns3/abort.h"
 #include "ns3/double.h"
-#include "ns3/pointer.h"
+#include "ns3/object-base.h"
 #include "ns3/tuple.h"
 #include "ns3/uinteger.h"
+#include "ns3/vector.h"
 
+#include <cmath>
+#include <complex>
 #include <cstdint>
 
 namespace ns3
@@ -60,13 +64,7 @@ IrsSpectrumModel::GetTypeId()
                 "Amount of samples for wave.",
                 UintegerValue(1000),
                 MakeDoubleAccessor(&IrsSpectrumModel::SetSamples, &IrsSpectrumModel::GetSamples),
-                MakeUintegerChecker<uint16_t>())
-            .AddAttribute("Direction",
-                          "The direction of the IRS.",
-                          VectorValue(Vector(1.0, 0.0, 0.0)),
-                          MakeVectorAccessor(&IrsSpectrumModel::SetDirection,
-                                             &IrsSpectrumModel::GetDirection),
-                          MakeVectorChecker());
+                MakeUintegerChecker<uint16_t>());
     return tid;
 }
 

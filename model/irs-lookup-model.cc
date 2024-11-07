@@ -21,6 +21,7 @@
 
 #include "irs-model.h"
 
+#include "ns3/object-base.h"
 #include "ns3/pointer.h"
 
 #include <cstdint>
