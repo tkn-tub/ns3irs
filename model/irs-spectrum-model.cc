@@ -107,25 +107,26 @@ IrsSpectrumModel::CalcElementPositions() const
 {
     // FIXME: must be dependent on m_direction and actual position - for now lies in
     // yz-plane at 0,0,0
-
-    return Eigen::Matrix<double, Eigen::Dynamic, 3>::NullaryExpr(
-        m_Nr * m_Nc,
-        3,
-        [this](Eigen::Index row, Eigen::Index col) {
-            int i = row / m_Nc;
-            int j = row % m_Nc;
-            switch (col)
-            {
-            case 0:
-                return 0.0; // x
-            case 1:
-                return (i - (m_Nr - 1) / 2.0) * m_dr; // y
-            case 2:
-                return ((m_Nc - 1) / 2.0 - j) * m_dc; // z
-            default:
-                return 0.0;
-            }
-        });
+    static Eigen::MatrixX3d element_positions =
+        Eigen::Matrix<double, Eigen::Dynamic, 3>::NullaryExpr(
+            m_Nr * m_Nc,
+            3,
+            [this](Eigen::Index row, Eigen::Index col) {
+                int i = row / m_Nc;
+                int j = row % m_Nc;
+                switch (col)
+                {
+                case 0:
+                    return 0.0; // x
+                case 1:
+                    return (i - (m_Nr - 1) / 2.0) * m_dr; // y
+                case 2:
+                    return ((m_Nc - 1) / 2.0 - j) * m_dc; // z
+                default:
+                    return 0.0;
+                }
+            });
+    return element_positions;
 }
 
 Eigen::VectorXcd

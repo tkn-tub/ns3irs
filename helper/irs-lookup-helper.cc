@@ -19,8 +19,8 @@
 
 #include "irs-lookup-helper.h"
 
+#include "ns3/irs-lookup-model.h"
 #include "ns3/abort.h"
-#include "ns3/irs-lookup-table.h"
 #include "ns3/log.h"
 #include "ns3/names.h"
 #include "ns3/object.h"

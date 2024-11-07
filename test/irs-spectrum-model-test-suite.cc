@@ -17,9 +17,9 @@
 
 #include "ns3/abort.h"
 #include "ns3/config.h"
-#include "ns3/irs-spectrum-model.h"
-#include "ns3/irs-lookup-table.h"
 #include "ns3/irs-lookup-model.h"
+#include "ns3/irs-lookup-table.h"
+#include "ns3/irs-spectrum-model.h"
 #include "ns3/log.h"
 #include "ns3/node-container.h"
 #include "ns3/test.h"
@@ -139,7 +139,11 @@ IrsSpectrumModelTestCase::DoRun()
         irs->SetN(tv.N);
         irs->SetSpacing(tv.d);
         irs->SetFrequency(tv.freq);
-        irs->CalcRCoeffs(40, 42.7989, Angles(DegreesToRadians(tv.in_angle), DegreesToRadians(0)), Angles(DegreesToRadians(tv.out_angle), DegreesToRadians(0)), tv.delta);
+        irs->CalcRCoeffs(40,
+                         42.7989,
+                         Angles(DegreesToRadians(tv.in_angle), DegreesToRadians(0)),
+                         Angles(DegreesToRadians(tv.out_angle), DegreesToRadians(0)),
+                         tv.delta);
 
         irsNormal->SetDirection(Vector(0, 1, 0));
         irsNormal->SetLookupTable(SetLookupTable(tv.lookuptable));
