@@ -15,15 +15,17 @@ for i = 1:length(x_ris_range)
     [r_ap_ris,a_ap_ris,r_ris_ue,a_ris_ue] = calcangle(pos_ap, pos_ue, pos_ris, [0,1,0]);
 
     ris_table = generateIrsLookupTable(round(a_ap_ris(1)), round(a_ris_ue(1)), Nr, Nc, freq, abs(pos_ue(1)-pos_ap(1)), r_ap_ris, r_ris_ue, 0, "constructive_changeRisPos");
-    % c_array(i) = sprintf('IRS_%d_IN%d_OUT%d_FREQ%.2fGHz_%s.csv', Nr*Nc, round(a_ap_ris(1)), round(a_ris_ue(1)), freq/1e9, "constructive_changeRisPos");
+    c_array(i) = sprintf('IRS_%d_IN%d_OUT%d_FREQ%.2fGHz_%s.csv', Nr*Nc, round(a_ap_ris(1)), round(a_ris_ue(1)), freq/1e9, "constructive_changeRisPos");
 end
-% fprintf('const char* irs_lookup_table[%d] = {\n', length(c_array));
-% for i = 1:length(c_array)
-%     fprintf('    %s', c_array(i));
-%     if i < length(c_array)
-%         fprintf(',\n');
-%     else
-%         fprintf('\n');
-%     end
-% end
-% fprintf('};\n');
+
+% print array to use in ns3
+fprintf('const char* irs_lookup_table[%d] = {\n', length(c_array));
+for i = 1:length(c_array)
+    fprintf('    %s', c_array(i));
+    if i < length(c_array)
+        fprintf(',\n');
+    else
+        fprintf('\n');
+    end
+end
+fprintf('};\n');

@@ -1,4 +1,4 @@
-function ris_table = generateIrsLookupTable(optimal_in_angle, optimal_out_angle, Nr, Nc, fc, r_ap_ue, r_ap_ris, r_ue_ris, phase_shift, file_name)
+function ris_table = generateIrsLookupTable(optimal_in_angle, optimal_out_angle, Nr, Nc, fc, r_ap_ue, r_ap_ris, r_ue_ris, phase_shift, file_name, alpha, numIrs)
 % generateIrsLookupTable
 %   optimal_in_angle, optimal_out_angle - angles the RIS is optimized for
 %   Nr, Nc - number of rows/columns of the RIS
@@ -6,15 +6,33 @@ function ris_table = generateIrsLookupTable(optimal_in_angle, optimal_out_angle,
 %   r_ue_ap, r_ap_ris, r_ue_ris - distances for the respective paths
 %   phase_shift - phase shift to create interference with LoS path (pi for destructive interference, 0 for constructive interference)
 %   file_name - IRS_[...]_[file_name].csv
+%   alpha - gain control
+%   numIrs - amount of IRS to split phase shifts
 
 only_in_out = false;
 file_name_set = false;
 
 if (nargin == 5)
+    % no phase control
     only_in_out = true;
+elseif(nargin == 9)
+    % phase control
+    alpha = 1;
+    numIrs = 1;
 elseif(nargin == 10)
+    % phase control, filename
     file_name_set = true;
-elseif(nargin ~= 9)
+    alpha = 1;
+    numIrs = 1;
+
+elseif(nargin == 11)
+    % phase control, filename, gain control
+    file_name_set = true;
+    numIrs = 1;
+elseif(nargin == 12)
+    % phase control, filename, gain control, multi IRS
+    file_name_set = true;
+else
     error("Wrong amount of arguments");
 end
 
@@ -30,17 +48,8 @@ dc = 0.5*lambda; % Column spacing
 ris = helperRISSurface('Size',[Nr Nc],'ElementSpacing',[dr dc],...
     'ReflectorElement',phased.IsotropicAntennaElement,'OperatingFrequency',fc);
 
-% Create channel
-chanAPToRIS = phased.FreeSpace('SampleRate',10e6,'PropagationSpeed',c,...
-    'MaximumDistanceSource','Property','MaximumDistance',500, 'OperatingFrequency', fc);
-
 % Define angle range for lookup table
 angles = 0:1:180;
-
-% RIS position
-d2_ris = 10;
-pos_ris = zeros(3,1);
-v = zeros(3,1);
 
 stv = getSteeringVector(ris);
 
@@ -53,8 +62,8 @@ else
     % Calculate the optimal reflection coefficient
     direct_path_phase = (2 * pi * r_ap_ue) / lambda;
     reflected_path_phase = (2 * pi * (r_ap_ris + r_ue_ris)) / lambda;
-    required_phase_shift =  phase_shift + reflected_path_phase - direct_path_phase;
-    rcoeff_ris = exp(1i * (wrapToPi(required_phase_shift) - angle(hr) - angle(g)));
+    required_phase_shift =  (phase_shift + reflected_path_phase - direct_path_phase) / numIrs;
+    rcoeff_ris = alpha * exp(1i * (wrapToPi(required_phase_shift) - angle(hr) - angle(g)));
 
 end
 
@@ -63,15 +72,11 @@ end
 in_angles = in_angles(:);
 out_angles = out_angles(:);
 
-% Position calculation
-pos_ap = [d2_ris*cosd(in_angles)'; d2_ris*sind(in_angles)'; zeros(1, numel(in_angles))];
-
 % Preallocate results array
 num_angles = numel(in_angles);
 results = zeros(num_angles, 4);
 
-% input signal
-x_ris_in = chanAPToRIS(ones(1e3, 1), pos_ap(:,1), pos_ris, v, v);
+x_ris_in = ones(1e3, 1);
 
 % Use parfor for parallel processing
 parfor i = 1:num_angles
