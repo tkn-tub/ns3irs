@@ -63,8 +63,14 @@ IrsSpectrumModel::GetTypeId()
                 "Samples",
                 "Amount of samples for wave.",
                 UintegerValue(1000),
-                MakeDoubleAccessor(&IrsSpectrumModel::SetSamples, &IrsSpectrumModel::GetSamples),
-                MakeUintegerChecker<uint16_t>());
+                MakeUintegerAccessor(&IrsSpectrumModel::SetSamples, &IrsSpectrumModel::GetSamples),
+                MakeUintegerChecker<uint16_t>())
+            .AddAttribute("Frequency",
+                          "Frequency in Hz",
+                          DoubleValue(5.21e9),
+                          MakeDoubleAccessor(&IrsSpectrumModel::SetFrequency,
+                                             &IrsSpectrumModel::GetFrequency),
+                          MakeDoubleChecker<double>());
     return tid;
 }
 
@@ -79,16 +85,27 @@ IrsSpectrumModel::CalcRCoeffs(double dApSta,
                               Angles outAngle,
                               double delta)
 {
-    // Calculate steering vectors and their arguments
+    m_elementPos = CalcElementPositions();
+
     Eigen::VectorXcd stv_in = CalcSteeringvector(inAngle, m_lambda).array().arg();
     Eigen::VectorXcd stv_out = CalcSteeringvector(outAngle, m_lambda).array().arg();
-    // Calculate phase shift
     double shift = CalcPhaseShift(dApSta, dApIrsSta, delta);
 
     m_rcoeffs = (std::complex<double>(0, 1) *
                  (Eigen::VectorXd::Constant(m_Nr * m_Nc, shift) - stv_in - stv_out))
                     .array()
                     .exp();
+}
+
+void
+IrsSpectrumModel::CalcRCoeffs(Angles inAngle, Angles outAngle)
+{
+    m_elementPos = CalcElementPositions();
+
+    Eigen::VectorXcd stv_in = CalcSteeringvector(inAngle, m_lambda).array().arg();
+    Eigen::VectorXcd stv_out = CalcSteeringvector(outAngle, m_lambda).array().arg();
+
+    m_rcoeffs = (std::complex<double>(0, 1) * (-stv_in - stv_out)).array().exp();
 }
 
 Eigen::Vector3d
@@ -105,8 +122,6 @@ IrsSpectrumModel::CalcWaveVector(Angles angle, double lambda) const
 Eigen::MatrixX3d
 IrsSpectrumModel::CalcElementPositions() const
 {
-    // FIXME: must be dependent on m_direction and actual position - for now lies in
-    // yz-plane at 0,0,0
     static Eigen::MatrixX3d element_positions =
         Eigen::Matrix<double, Eigen::Dynamic, 3>::NullaryExpr(
             m_Nr * m_Nc,
@@ -133,9 +148,8 @@ Eigen::VectorXcd
 IrsSpectrumModel::CalcSteeringvector(Angles angle, double lambda) const
 {
     Eigen::Vector3d k = CalcWaveVector(angle, lambda);
-    Eigen::MatrixX3d r = CalcElementPositions();
 
-    return (-std::complex<double>(0, 1) * (r * k).array()).exp();
+    return (-std::complex<double>(0, 1) * (m_elementPos * k).array()).exp();
 }
 
 double
@@ -232,5 +246,4 @@ IrsSpectrumModel::GetRcoeffs() const
 {
     return m_rcoeffs;
 }
-
 } // namespace ns3

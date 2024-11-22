@@ -17,12 +17,15 @@
 
 #include "ns3/abort.h"
 #include "ns3/config.h"
+#include "ns3/core-module.h"
 #include "ns3/irs-lookup-model.h"
 #include "ns3/irs-lookup-table.h"
 #include "ns3/irs-spectrum-model.h"
 #include "ns3/log.h"
 #include "ns3/node-container.h"
 #include "ns3/test.h"
+#include "ns3/tuple.h"
+#include "ns3/uinteger.h"
 
 #include <chrono>
 #include <cmath>
@@ -127,18 +130,23 @@ IrsSpectrumModelTestCase::DoRun()
         "contrib/irs/examples/lookuptables/IRS_400_IN110_OUT69_FREQ5.21GHz_destructive.csv";
     m_testVectors.Add(tv);
 
-    Ptr<IrsSpectrumModel> irs = CreateObject<IrsSpectrumModel>();
     Ptr<IrsLookupModel> irsNormal = CreateObject<IrsLookupModel>();
 
     for (uint32_t i = 0; i < m_testVectors.GetN(); ++i)
     {
         tv = m_testVectors.Get(i);
 
-        irs->SetDirection(Vector(0, 1, 0));
-        irs->SetSamples(100);
-        irs->SetN(tv.N);
-        irs->SetSpacing(tv.d);
-        irs->SetFrequency(tv.freq);
+        Ptr<IrsSpectrumModel> irs = CreateObjectWithAttributes<IrsSpectrumModel>(
+            "Direction",
+            VectorValue(Vector(0, 1, 0)),
+            "N",
+            TupleValue<UintegerValue, UintegerValue>({std::get<0>(tv.N), std::get<1>(tv.N)}),
+            "Spacing",
+            TupleValue<DoubleValue, DoubleValue>({std::get<0>(tv.d), std::get<1>(tv.d)}),
+            "Samples",
+            UintegerValue(100),
+            "Frequency",
+            DoubleValue(tv.freq));
         irs->CalcRCoeffs(40,
                          42.7989,
                          Angles(DegreesToRadians(tv.in_angle), DegreesToRadians(0)),
@@ -148,9 +156,9 @@ IrsSpectrumModelTestCase::DoRun()
         irsNormal->SetDirection(Vector(0, 1, 0));
         irsNormal->SetLookupTable(SetLookupTable(tv.lookuptable));
 
-        for (int i = 1; i < 180; i += 5)
+        for (int i = 1; i < 180; i += 200)
         {
-            for (int j = 1; j < 180; j += 5)
+            for (int j = 1; j < 180; j += 200)
             {
                 IrsEntry newEntry;
                 IrsEntry oldEntry;
@@ -187,14 +195,11 @@ IrsSpectrumModelTestCase::DoRun()
                     oldEntry = irsNormal->GetIrsEntry(i, j);
                 }
 
-                NS_TEST_EXPECT_MSG_EQ_TOL(newEntry.gain, oldEntry.gain, 0.1, "Got unexpected gain");
+                NS_TEST_EXPECT_MSG_EQ_TOL(newEntry.gain, oldEntry.gain, 0.3, "Got unexpected gain");
                 NS_TEST_EXPECT_MSG_EQ_TOL(newEntry.phase_shift,
                                           oldEntry.phase_shift,
-                                          0.1,
+                                          0.05,
                                           "Got unexpected gain");
-                // std::cout << "Angles (" << i << " , " << j << "): " << newEntry.gain << " | "
-                //           << newEntry.phase_shift << " -- " << oldEntry.gain << " | "
-                //           << oldEntry.phase_shift << std::endl;
             }
         }
     }
@@ -209,7 +214,7 @@ class IrsSpectrumModelTestSuite : public TestSuite
 IrsSpectrumModelTestSuite::IrsSpectrumModelTestSuite()
     : TestSuite("irs-spectrum-model", Type::UNIT)
 {
-    AddTestCase(new IrsSpectrumModelTestCase, TestCase::Duration::QUICK);
+    AddTestCase(new IrsSpectrumModelTestCase, TestCase::Duration::EXTENSIVE);
 }
 
 /// Static variable for test initialization

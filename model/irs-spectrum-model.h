@@ -55,6 +55,8 @@ class IrsSpectrumModel : public IrsModel
                      Angles outAngle,
                      double delta);
 
+    void CalcRCoeffs(Angles inAngle, Angles outAngle);
+
     void SetN(std::tuple<uint16_t, uint16_t> N);
     std::tuple<uint16_t, uint16_t> GetN() const;
 
@@ -93,6 +95,7 @@ class IrsSpectrumModel : public IrsModel
     double m_frequency;
     double m_lambda;
     Eigen::VectorXcd m_rcoeffs;
+    Eigen::MatrixX3d m_elementPos;
 };
 
 } // namespace ns3

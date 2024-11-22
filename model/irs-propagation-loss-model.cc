@@ -95,11 +95,22 @@ IrsPropagationLossModel::~IrsPropagationLossModel()
 {
 }
 
+void
+IrsPropagationLossModel::DoInitialize()
+{
+    NS_ASSERT_MSG(!m_initialized, "DoInitialize should be only called once.");
+    NS_ABORT_MSG_UNLESS(m_irsNodes, "IRS nodes not set.");
+    NS_ABORT_MSG_UNLESS(m_irsLossModel, "IRS loss model not set.");
+    CalcIrsPaths();
+    m_initialized = true;
+    PropagationLossModel::DoInitialize();
+}
+
 // from FriisPropagationLossModel
 void
 IrsPropagationLossModel::SetFrequency(double frequency)
 {
-    NS_ASSERT_MSG(frequency > 0, "Frequency should be greater zero (in Hz)");
+    NS_ABORT_MSG_UNLESS(frequency > 0, "Frequency should be greater zero (in Hz)");
     m_frequency = frequency;
     static const double c = 299792458.0; // speed of light in vacuum
     m_lambda = c / frequency;
@@ -114,9 +125,19 @@ IrsPropagationLossModel::GetFrequency() const
 void
 IrsPropagationLossModel::SetIrsNodes(Ptr<NodeContainer> nodes)
 {
-    NS_ASSERT_MSG(nodes && nodes->GetN() > 0, "IRS nodes are not set or the container is empty");
+    NS_ABORT_MSG_UNLESS(nodes && nodes->GetN() > 0, "IRS container is null or container is empty.");
+    for (uint32_t i = 0; i < nodes->GetN(); ++i)
+    {
+        NS_ABORT_MSG_UNLESS(nodes->Get(i)->GetObject<MobilityModel>(),
+                            "Mobility model not set for IRS node.");
+        NS_ABORT_MSG_UNLESS(nodes->Get(i)->GetObject<IrsModel>(),
+                            "IRS object not set for IRS node.");
+    }
     m_irsNodes = nodes;
-    CalcIrsPaths();
+    if (!m_initialized && m_irsLossModel)
+    {
+        DoInitialize();
+    }
 }
 
 Ptr<NodeContainer>
@@ -128,8 +149,12 @@ IrsPropagationLossModel::GetIrsNodes() const
 void
 IrsPropagationLossModel::SetIrsPropagationModel(Ptr<PropagationLossModel> model)
 {
-    NS_ASSERT_MSG(model, "Cannot set a null propagation model");
+    NS_ABORT_MSG_UNLESS(model, "Provided IRS propagation model is null.");
     m_irsLossModel = model;
+    if (!m_initialized && m_irsNodes)
+    {
+        DoInitialize();
+    }
 }
 
 Ptr<PropagationLossModel>
@@ -141,7 +166,7 @@ IrsPropagationLossModel::GetIrsPropagatioModel() const
 void
 IrsPropagationLossModel::SetLosPropagationModel(Ptr<PropagationLossModel> model)
 {
-    NS_ASSERT_MSG(model, "Cannot set a null propagation model");
+    NS_ABORT_MSG_UNLESS(model, "Provided LOS propagation model is null.");
     m_losLossModel = model;
 }
 
@@ -239,27 +264,14 @@ void
 IrsPropagationLossModel::CalcIrsPaths()
 {
     m_irsPaths.clear();
-
-    // Helper function to check if two IRS are facing each other
-    auto facingEachOther = [](Ptr<Node> irs1, Ptr<Node> irs2) {
-        auto mobility1 = irs1->GetObject<MobilityModel>();
-        auto mobility2 = irs2->GetObject<MobilityModel>();
-        auto irsObj1 = irs1->GetObject<IrsModel>();
-        auto irsObj2 = irs2->GetObject<IrsModel>();
-
-        NS_ASSERT_MSG(mobility1 && mobility2, "Mobility model not set for IRS node");
-        NS_ASSERT_MSG(irsObj1 && irsObj2, "IRS object not set for node");
-
+    auto facingEachOther = [](Ptr<MobilityModel> mobility1,
+                              Ptr<MobilityModel> mobility2,
+                              Ptr<IrsModel> irsObj1,
+                              Ptr<IrsModel> irsObj2) {
         Vector pos1 = mobility1->GetPosition();
         Vector pos2 = mobility2->GetPosition();
-
-        Vector vec12 = pos2 - pos1;
-        Vector vec21 = pos1 - pos2;
-
-        // Check if the dot products are positive (vectors are pointing in the same general
-        // direction)
-        return (irsObj1->GetDirection() * vec12 > std::numeric_limits<double>::epsilon()) &&
-               (irsObj2->GetDirection() * vec21 > std::numeric_limits<double>::epsilon());
+        return (irsObj1->GetDirection() * (pos2 - pos1) > std::numeric_limits<double>::epsilon()) &&
+               (irsObj2->GetDirection() * (pos1 - pos2) > std::numeric_limits<double>::epsilon());
     };
 
     // Generate all possible paths considering order
@@ -278,26 +290,56 @@ IrsPropagationLossModel::CalcIrsPaths()
                     currentPath.push_back(m_irsNodes->Get(i));
                 }
             }
-
-            // Generate all permutations of the current path
             do
             {
                 bool validPath = true;
-
-                // Check if IRSs are facing each other for paths longer than 1
+                double loss = 0.0;
                 if (currentPath.size() > 1)
                 {
                     for (size_t i = 0; i < currentPath.size() - 1; ++i)
                     {
-                        if (!facingEachOther(currentPath[i], currentPath[i + 1]))
+                        auto mobility1 = currentPath[i]->GetObject<MobilityModel>();
+                        auto mobility2 = currentPath[i + 1]->GetObject<MobilityModel>();
+                        auto irsObj1 = currentPath[i]->GetObject<IrsModel>();
+                        auto irsObj2 = currentPath[i + 1]->GetObject<IrsModel>();
+                        // prune path if IRS aren't facing each other
+                        if (!facingEachOther(mobility1, mobility2, irsObj1, irsObj2))
                         {
                             validPath = false;
                             break;
                         }
+                        // calc pathloss over IRS
+                        double segmentLoss = m_irsLossModel->CalcRxPower(0, mobility1, mobility2);
+                        loss += segmentLoss;
+                        if (loss < -100)
+                        {
+                            validPath = false;
+                            break;
+                        }
+                        // For paths 3+ nodes, add IRS gain at intermediate nodes
+                        if (currentPath.size() > 2 && i < currentPath.size() - 2)
+                        {
+                            std::pair<double, double> angles = CalcAngles(
+                                mobility1->GetPosition(),
+                                currentPath[i + 2]->GetObject<MobilityModel>()->GetPosition(),
+                                mobility2->GetPosition(),
+                                irsObj2->GetDirection());
+
+                            if (angles.first < 0 || angles.second < 0)
+                            {
+                                validPath = false;
+                                break;
+                            }
+                            loss += irsObj2
+                                        ->GetIrsEntry(std::round(angles.first),
+                                                      std::round(angles.second))
+                                        .gain;
+                        }
                     }
                 }
 
-                if (validPath)
+                // prune paths, which lie under the noise floor
+                if (validPath && loss > -100)
                 {
                     m_irsPaths.push_back(currentPath);
                 }
@@ -372,8 +414,6 @@ IrsPropagationLossModel::DoCalcRxPower(double txPowerDbm,
                                        Ptr<MobilityModel> a,
                                        Ptr<MobilityModel> b) const
 {
-    NS_ASSERT_MSG(m_irsLossModel, "IRS path loss model is not set");
-
     NS_LOG_DEBUG("--------- IRS Propagation Loss Model Debug Info ---------");
     NS_LOG_DEBUG("m_frequency (Hz): " << m_frequency);
     NS_LOG_DEBUG("TX Power (dBm): " << txPowerDbm);

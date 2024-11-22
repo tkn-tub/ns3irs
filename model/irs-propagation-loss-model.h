@@ -159,13 +159,16 @@ class IrsPropagationLossModel : public PropagationLossModel
 
     int64_t DoAssignStreams(int64_t stream) override;
 
+    void DoInitialize() override;
+
     std::vector<IrsPath> m_irsPaths;
     Ptr<NodeContainer> m_irsNodes;
     Ptr<PropagationLossModel> m_irsLossModel;
     Ptr<PropagationLossModel> m_losLossModel;
     Ptr<NormalRandomVariable> m_rng;
-    double m_frequency;
-    double m_lambda;
+    double m_frequency = 5.21e9;
+    double m_lambda = 0.05754;
+    bool m_initialized = false;
 
     // friend classes to test private functions
     friend class ::IrsPropagationLossModelTestCase;
