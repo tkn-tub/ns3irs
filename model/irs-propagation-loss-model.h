@@ -27,130 +27,152 @@
 
 #include <complex>
 
-// friend classes to test private fuctions
-class IrsPropagationLossModelTestCase;
-class IrsPropagationLossModelHelperFunctionsTestCase;
+/**
+ * \defgroup irs Intelligent Reflecting Surface (IRS) Models
+ * This module provides base classes and utilities for simulating Intelligent Reflecting Surfaces
+ */
 
 namespace ns3
 {
 typedef std::vector<Ptr<Node>> IrsPath;
 
+/**
+ * \class IrsPropagationLossModel
+ * \brief Models signal propagation with IRS nodes in the channel.
+ *
+ * The \c IrsPropagationLossModel class extends the \c PropagationLossModel to account for
+ * Intelligent Reflecting Surfaces (IRS) in the channel. It computes signal losses for paths
+ * involving IRS nodes and includes parameters such as carrier frequency, error model, and
+ * propagation loss models for line-of-sight (LoS) and IRS-reflected paths.
+ */
 class IrsPropagationLossModel : public PropagationLossModel
 {
   public:
     /**
-     * \brief Get the type ID.
-     * \return the object TypeId
+     * \brief Get the TypeId of this class.
+     * \return The object TypeId.
      */
     static TypeId GetTypeId();
-
     IrsPropagationLossModel();
     ~IrsPropagationLossModel() override;
-
-    // Delete copy constructor and assignment operator to avoid misuse
     IrsPropagationLossModel(const IrsPropagationLossModel&) = delete;
     IrsPropagationLossModel& operator=(const IrsPropagationLossModel&) = delete;
 
     /**
-     * \param frequency (Hz)
-     *
-     * Set the carrier frequency used in the irs model
-     * calculation.
+     * \brief Set the carrier frequency used in the IRS model calculations.
+     * \param frequency The carrier frequency in Hz.
      */
     void SetFrequency(double frequency);
 
     /**
-     * \return the current frequency (Hz)
+     * \brief Get the current carrier frequency.
+     * \return The carrier frequency in Hz.
      */
     double GetFrequency() const;
 
     /**
-     * \param IRS nodes in the channel
+     * \brief Set the IRS nodes involved in the channel.
+     * \param nodes A pointer to the \c NodeContainer containing IRS nodes.
      *
-     * Set the IRS nodes in the channel. Nodes should contain irs model
+     * The specified nodes should include an \c IrsModel and an \c MobilityModel.
      */
     void SetIrsNodes(Ptr<NodeContainer> nodes);
 
     /**
-     * \return the irs nodes
+     * \brief Get the current IRS nodes in the channel.
+     * \return A pointer to the \c NodeContainer containing IRS nodes.
      */
     Ptr<NodeContainer> GetIrsNodes() const;
 
     /**
-     * Set the PropagationLossModel for the paths Tx -> IRS and IRS -> Rx
+     * \brief Set the propagation loss model for paths involving IRS nodes.
+     * \param model A pointer to the \c PropagationLossModel used for IRS paths.
      *
-     * \param model PropagationLossModel
+     * This model is applied to compute losses for signal paths that include IRS nodes.
      */
     void SetIrsPropagationModel(Ptr<PropagationLossModel> model);
 
     /**
-     * \return the propagation model
+     * \brief Get the propagation loss model used for IRS paths.
+     * \return A pointer to the \c PropagationLossModel.
      */
     Ptr<PropagationLossModel> GetIrsPropagatioModel() const;
 
     /**
-     * Set the PropagationLossModel for the line-of-sight
-     *
-     * \param model PropagationLossModel
+     * \brief Set the propagation loss model for line-of-sight (LoS) paths.
+     * \param model A pointer to the \c PropagationLossModel used for LoS paths.
      */
     void SetLosPropagationModel(Ptr<PropagationLossModel> model);
 
     /**
-     * \return the propagation model for the line-of-sight
+     * \brief Get the propagation loss model used for LoS paths.
+     * \return A pointer to the \c PropagationLossModel.
      */
     Ptr<PropagationLossModel> GetLosPropagatioModel() const;
 
     /**
-     * Output streamer.
-     * IRS paths are written as "[1->2]".
-     *
-     * \param [in,out] os The stream.
-     * \param [in] vector The vector to stream
-     * \return The stream.
+     * \brief Set the error model for the IRS.
+     * \param values A tuple with two elements:
+     *               - \c mean: The mean of the error in dB.
+     *               - \c variance: The variance of the error in dB.
+     */
+    void SetErrorModel(std::tuple<double, double> values);
+
+    /**
+     * \brief Get the current error model.
+     * \return A tuple with the mean and variance of the error in dB.
+     */
+    std::tuple<double, double> GetErrorModel() const;
+
+    /**
+     * IRS paths are represented as strings of the form "[Node1->Node2]".
      */
     friend std::ostream& operator<<(std::ostream& os, const std::vector<IrsPath>& paths);
 
-    void SetErrorModel(std::tuple<double, double> values);
-    std::tuple<double, double> GetErrorModel() const;
-
   private:
     /**
-     * Transforms a Dbm value to Watt
-     * \param w the Dbm value
-     * \return the Watt
+     * \brief Convert a dBm value to Watts.
+     * \param dbm The power in dBm.
+     * \return The power in Watts.
      */
     double DbmToW(double dbm) const;
 
     /**
-     * Transforms a Watt value to Dbm
-     * \param w the Watt value
-     * \return the Dbm
+     * \brief Convert a power value in Watts to dBm.
+     * \param w The power in Watts.
+     * \return The power in dBm.
      */
     double DbmFromW(double w) const;
 
     /**
-     * Computes the angle of incidence and the angle of reflection for the vectors
-     * from IRS to A and B, with respect to the direction of the IRS. If points A and B
-     * are located on opposite sides of the IRS, the function returns (-1, -1) to indicate this
-     * situation.
-     *
-     * @param a position of A
-     * @param b Position of B
-     * @param irs Position of IRS
-     * @param irsNormal Normal vector of the IRS
-     *
-     * @return A std::pair containing:
-     *         - The angle of incidence in degrees (0 to 180 degrees).
-     *         - The angle of reflection in degrees (0 to 180 degrees).
-     *         If points A and B are on opposite sides of the IRS, both angles will be set to -1.
+     * \brief Compute angles of incidence and reflection with respect to the IRS.
+     * \param a Position of point A (source or receiver).
+     * \param b Position of point B (source or receiver).
+     * \param irs Position of the IRS.
+     * \param irsNormal Normal vector of the IRS.
+     * \return A pair of angles in degrees:
+     *         - The angle of incidence.
+     *         - The angle of reflection.
+     *         Returns (-1, -1) if A and B are on opposite sides of the IRS.
      */
     std::pair<double, double> CalcAngles(ns3::Vector a,
                                          ns3::Vector b,
                                          ns3::Vector irs,
                                          ns3::Vector irsNormal) const;
 
+    /**
+     * \brief Compute all possible signal paths involving IRS nodes.
+     */
     void CalcIrsPaths();
 
+    /**
+     * \brief Compute the signal contribution of a specific IRS path.
+     * \param path The IRS path as a vector of \c Ptr<Node>.
+     * \param txPowerDbm Transmitter power in dBm.
+     * \param source Mobility model of the source node.
+     * \param destination Mobility model of the destination node.
+     * \return The path contribution as a complex number.
+     */
     std::complex<double> CalcPath(const IrsPath& path,
                                   double txPowerDbm,
                                   Ptr<MobilityModel> source,
@@ -173,9 +195,9 @@ class IrsPropagationLossModel : public PropagationLossModel
     double m_lambda = 0.05754;
     bool m_initialized = false;
 
-    // friend classes to test private functions
-    friend class ::IrsPropagationLossModelTestCase;
-    friend class ::IrsPropagationLossModelHelperFunctionsTestCase;
+    // Friend classes to test private functions
+    friend class IrsPropagationLossModelTestCase;
+    friend class IrsPropagationLossModelHelperFunctionsTestCase;
 };
 
 } // namespace ns3

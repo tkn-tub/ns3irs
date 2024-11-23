@@ -31,60 +31,155 @@
 #include <sys/types.h>
 
 /**
- * \defgroup irs Description of the irs
+ * \defgroup irs Intelligent Reflecting Surface (IRS) Models
+ * This module provides base classes and utilities for simulating Intelligent Reflecting Surfaces
  */
 namespace ns3
 {
 
+/**
+ * \class IrsSpectrumModel
+ * \brief Implements an IRS model compatible with spectrum-based propagation models.
+ *
+ * This class calculates IRS reflection coefficients, steering vectors, and
+ * element positions based on the spectrum propagation model.
+ */
 class IrsSpectrumModel : public IrsModel
 {
   public:
     /**
-     * \brief Get the type ID.
+     * \brief Get the type ID for runtime type identification.
      * \return the object TypeId
      */
     static TypeId GetTypeId();
+
+    /**
+     * \brief Default constructor for the IRS spectrum model.
+     */
     IrsSpectrumModel();
 
+    /**
+     * \brief Retrieve an IRS entry based on input and output angles.
+     * \param in_angle Input angle (azimuth) in degrees.
+     * \param out_angle Output angle (azimuth) in degrees.
+     * \return The corresponding \c IrsEntry object.
+     */
     IrsEntry GetIrsEntry(uint8_t in_angle, uint8_t out_angle) const override;
+
+    /**
+     * \brief Retrieve an IRS entry based on angles and wavelength.
+     * \param in Input angles (azimuth and elevation in radians) as an \c Angles object.
+     * \param out Output angles (azimuth and elevation in radians) as an \c Angles object.
+     * \param lambda Wavelength of the signal in meters.
+     * \return The corresponding \c IrsEntry object.
+     */
     IrsEntry GetIrsEntry(Angles in, Angles out, double lambda) const override;
 
+    /**
+     * \brief Calculate reflection coefficients based on path distances, angles, and phase offset.
+     * \param dApSta Distance between the access point and the station
+     * \param dApIrsSta Distance from the access point to the IRS and then to the station
+     * \param inAngle Incident angles
+     * \param outAngle Reflection angles
+     * \param delta Phase offset
+     */
     void CalcRCoeffs(double dApSta,
                      double dApIrsSta,
                      Angles inAngle,
                      Angles outAngle,
                      double delta);
 
+    /**
+     * \brief Calculate reflection coefficients for the given angles.
+     * \param inAngle Incident angles
+     * \param outAngle Reflection angles
+     */
     void CalcRCoeffs(Angles inAngle, Angles outAngle);
 
+    /**
+     * \brief Set the number of IRS elements along each dimension.
+     * \param N Tuple containing the number of rows (Nr) and columns (Nc)
+     */
     void SetN(std::tuple<uint16_t, uint16_t> N);
+
+    /**
+     * \brief Retrieve the number of IRS elements.
+     * \return Tuple with the number of rows (Nr) and columns (Nc)
+     */
     std::tuple<uint16_t, uint16_t> GetN() const;
 
+    /**
+     * \brief Set the element spacing of the IRS.
+     * \param d Tuple containing the row spacing (dr) and column spacing (dc) in meters
+     */
     void SetSpacing(std::tuple<double, double> d);
+
+    /**
+     * \brief Retrieve the IRS element spacing.
+     * \return Tuple with the row spacing (dr) and column spacing (dc) in meters
+     */
     std::tuple<double, double> GetSpacing() const;
 
+    /**
+     * \brief Set the number of samples for numerical calculations.
+     * \param samples Number of samples
+     */
     void SetSamples(const uint16_t samples);
+
+    /**
+     * \brief Retrieve the number of samples used.
+     * \return Number of samples
+     */
     uint16_t GetSamples() const;
 
+    /**
+     * \brief Retrieve the calculated reflection coefficients.
+     * \return A vector of complex reflection coefficients
+     */
     Eigen::VectorXcd GetRcoeffs() const;
 
     /**
-     * \param frequency (Hz)
-     *
-     * Set the carrier frequency used in the irs model
-     * calculation.
+     * \brief Set the carrier frequency for IRS calculations.
+     * \param frequency Carrier frequency in Hz
      */
     void SetFrequency(double frequency);
 
     /**
-     * \return the current frequency (Hz)
+     * \brief Retrieve the carrier frequency.
+     * \return Carrier frequency in Hz
      */
     double GetFrequency() const;
 
   private:
+    /**
+     * \brief Calculate the wave vector based on angles and wavelength.
+     * \param angle Incident or reflection angles
+     * \param lambda Wavelength in meters
+     * \return A wave vector
+     */
     Eigen::Vector3d CalcWaveVector(Angles angle, double lambda) const;
+
+    /**
+     * \brief Calculate the positions of IRS elements in 3D space.
+     * \return A matrix where each row corresponds to an element's 3D position
+     */
     Eigen::MatrixX3d CalcElementPositions() const;
+
+    /**
+     * \brief Calculate the steering vector for the given angles and wavelength.
+     * \param angle Incident or reflection angles
+     * \param lambda Wavelength in meters
+     * \return A vector representing the steering vector
+     */
     Eigen::VectorXcd CalcSteeringvector(Angles angle, double lambda) const;
+
+    /**
+     * \brief Calculate the phase shift for a given configuration.
+     * \param dApSta Distance between the access point and the station
+     * \param dApIrsSta Distance from the access point to the IRS and then to the station
+     * \param delta Phase offset
+     * \return Phase shift in radians
+     */
     double CalcPhaseShift(double dApSta, double dApIrsSta, double delta) const;
 
     uint16_t m_Nr;
@@ -103,31 +198,14 @@ class IrsSpectrumModel : public IrsModel
         Angles out;
         double lambda;
 
-        bool operator==(const CacheKey& other) const
-        {
-            constexpr double EPSILON = 1e-10;
-            return std::abs(in.GetAzimuth() - other.in.GetAzimuth()) < EPSILON &&
-                   std::abs(in.GetInclination() - other.in.GetInclination()) < EPSILON &&
-                   std::abs(out.GetAzimuth() - other.out.GetAzimuth()) < EPSILON &&
-                   std::abs(out.GetInclination() - other.out.GetInclination()) < EPSILON &&
-                   std::abs(lambda - other.lambda) < EPSILON;
-        }
+        bool operator==(const CacheKey& other) const;
     };
 
     struct CacheKeyHash
     {
-        size_t operator()(const CacheKey& key) const
-        {
-            size_t h1 = std::hash<double>()(key.in.GetAzimuth());
-            size_t h2 = std::hash<double>()(key.in.GetInclination());
-            size_t h3 = std::hash<double>()(key.out.GetAzimuth());
-            size_t h4 = std::hash<double>()(key.out.GetInclination());
-            size_t h5 = std::hash<double>()(key.lambda);
-            return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3) ^ (h5 << 4);
-        }
+        size_t operator()(const CacheKey& key) const;
     };
 
-    // Cache storage
     mutable std::unordered_map<CacheKey, IrsEntry, CacheKeyHash> m_cache;
 };
 
