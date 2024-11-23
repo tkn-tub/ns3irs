@@ -31,6 +31,7 @@
 #include "ns3/object.h"
 #include "ns3/pointer.h"
 #include "ns3/random-variable-stream.h"
+#include "ns3/tuple.h"
 
 #include <algorithm>
 #include <cmath>
@@ -74,6 +75,17 @@ IrsPropagationLossModel::GetTypeId()
                                               &IrsPropagationLossModel::GetLosPropagatioModel),
                           MakePointerChecker<PropagationLossModel>())
             .AddAttribute(
+                "ErrorModel",
+                "Gaussian-distributed error applied to the IRS gain in dB. The first value "
+                "specifies the mean, and the second specifies the variance.",
+                TupleValue<DoubleValue, DoubleValue>({0, 0}),
+                MakeTupleAccessor<DoubleValue, DoubleValue>(
+                    &IrsPropagationLossModel::SetErrorModel,
+                    &IrsPropagationLossModel::GetErrorModel),
+                MakeTupleChecker<DoubleValue, DoubleValue>(MakeDoubleChecker<double>(),
+                                                           MakeDoubleChecker<double>()))
+
+            .AddAttribute(
                 "Frequency",
                 "The carrier frequency (in Hz) at which propagation occurs (default is 5.21 GHz).",
                 DoubleValue(5.21e9),
@@ -86,9 +98,6 @@ IrsPropagationLossModel::GetTypeId()
 IrsPropagationLossModel::IrsPropagationLossModel()
     : PropagationLossModel()
 {
-    m_rng = CreateObject<NormalRandomVariable>();
-    m_rng->SetAttribute("Mean", DoubleValue(0.0));
-    m_rng->SetAttribute("Variance", DoubleValue(0.1));
 }
 
 IrsPropagationLossModel::~IrsPropagationLossModel()
@@ -174,6 +183,20 @@ Ptr<PropagationLossModel>
 IrsPropagationLossModel::GetLosPropagatioModel() const
 {
     return m_losLossModel;
+}
+
+void
+IrsPropagationLossModel::SetErrorModel(std::tuple<double, double> values)
+{
+    m_rng = CreateObject<NormalRandomVariable>();
+    m_rng->SetAttribute("Mean", DoubleValue(std::get<0>(values)));
+    m_rng->SetAttribute("Variance", DoubleValue(std::get<0>(values)));
+}
+
+std::tuple<double, double>
+IrsPropagationLossModel::GetErrorModel() const
+{
+    return {m_rng->GetMean(), m_rng->GetVariance()};
 }
 
 // from FriisPropagationLossModel

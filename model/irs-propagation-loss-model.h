@@ -110,6 +110,9 @@ class IrsPropagationLossModel : public PropagationLossModel
      */
     friend std::ostream& operator<<(std::ostream& os, const std::vector<IrsPath>& paths);
 
+    void SetErrorModel(std::tuple<double, double> values);
+    std::tuple<double, double> GetErrorModel() const;
+
   private:
     /**
      * Transforms a Dbm value to Watt
