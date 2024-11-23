@@ -171,6 +171,8 @@ IrsSpectrumModel::GetIrsEntry(Angles in, Angles out, double lambda) const
         return it->second;
     }
 
+    NS_ABORT_MSG_UNLESS(m_rcoeffs.size() > 0,
+                        "Reflection coefficients must be calculated before use.");
     Eigen::VectorXcd stv_in = CalcSteeringvector(in, lambda);
     Eigen::VectorXcd stv_out = CalcSteeringvector(out, lambda);
 
@@ -229,7 +231,7 @@ IrsSpectrumModel::GetSpacing() const
 void
 IrsSpectrumModel::SetFrequency(double frequency)
 {
-    NS_ABORT_MSG_UNLESS(frequency > 0, "Frequency should be greater zero (in Hz)");
+    NS_ABORT_MSG_UNLESS(frequency > 0, "Frequency should be greater zero (in Hz).");
     m_frequency = frequency;
     static const double c = 299792458.0; // speed of light in vacuum
     m_lambda = c / frequency;
@@ -244,6 +246,7 @@ IrsSpectrumModel::GetFrequency() const
 void
 IrsSpectrumModel::SetSamples(uint16_t samples)
 {
+    NS_ABORT_MSG_UNLESS(samples > 0, "Samples should be greater zero.");
     m_samples = samples;
 }
 

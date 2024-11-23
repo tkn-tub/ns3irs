@@ -68,6 +68,7 @@ IrsLookupModel::GetIrsEntry(Angles in, Angles out, double lambda) const
 void
 IrsLookupModel::SetLookupTable(const Ptr<IrsLookupTable> table)
 {
+    NS_ABORT_MSG_UNLESS(table, "Lookup table can not be null.");
     m_irsLookupTable = table;
 }
 

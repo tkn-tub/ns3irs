@@ -437,6 +437,7 @@ IrsPropagationLossModel::DoCalcRxPower(double txPowerDbm,
                                        Ptr<MobilityModel> a,
                                        Ptr<MobilityModel> b) const
 {
+    NS_ASSERT_MSG(a && b, "Mobility models a and be can not be null.");
     NS_LOG_DEBUG("--------- IRS Propagation Loss Model Debug Info ---------");
     NS_LOG_DEBUG("m_frequency (Hz): " << m_frequency);
     NS_LOG_DEBUG("TX Power (dBm): " << txPowerDbm);
