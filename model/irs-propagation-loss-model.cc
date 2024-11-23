@@ -19,7 +19,9 @@
 
 #include "irs-propagation-loss-model.h"
 
+#include "irs-lookup-model.h"
 #include "irs-model.h"
+#include "irs-spectrum-model.h"
 
 #include "ns3/angles.h"
 #include "ns3/assert.h"
@@ -38,6 +40,7 @@
 #include <cstdint>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <stddef.h>
 #include <utility>
 
@@ -84,7 +87,6 @@ IrsPropagationLossModel::GetTypeId()
                     &IrsPropagationLossModel::GetErrorModel),
                 MakeTupleChecker<DoubleValue, DoubleValue>(MakeDoubleChecker<double>(),
                                                            MakeDoubleChecker<double>()))
-
             .AddAttribute(
                 "Frequency",
                 "The carrier frequency (in Hz) at which propagation occurs (default is 5.21 GHz).",
@@ -236,14 +238,14 @@ operator<<(std::ostream& os, const std::vector<IrsPath>& paths)
     return os;
 }
 
-std::pair<double, double>
+std::optional<std::pair<double, double>>
 IrsPropagationLossModel::CalcAngles(ns3::Vector a,
                                     ns3::Vector b,
                                     ns3::Vector irs,
                                     ns3::Vector irsNormal) const
 {
-    // Check if both a and b are on the correct side of the IRS (the side the normal vector points
-    // to)
+    // Check if both a and b are on the correct side of the IRS (the side the irsNormal vector
+    // points to)
     double dotProductA =
         irsNormal.x * (a.x - irs.x) + irsNormal.y * (a.y - irs.y) + irsNormal.z * (a.z - irs.z);
     double dotProductB =
@@ -253,7 +255,7 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector a,
     if (dotProductA < std::numeric_limits<double>::epsilon() ||
         dotProductB < std::numeric_limits<double>::epsilon())
     {
-        return std::make_pair(-1, -1);
+        return std::nullopt;
     }
 
     // Vector from IRS to a and b
@@ -266,7 +268,7 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector a,
     // avoid division by zero
     if (IAnorm == 0 || IBnorm == 0)
     {
-        return std::make_pair(-1, -1);
+        return std::nullopt;
     }
 
     // Calculate the angle of incidence
@@ -283,6 +285,50 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector a,
     return std::make_pair(thetaIncDeg, thetaRefDeg);
 }
 
+std::optional<Angles>
+IrsPropagationLossModel::CalcAngles3D(ns3::Vector node,
+                                      ns3::Vector irs,
+                                      ns3::Vector irsNormal) const
+{
+    auto cross = [](const ns3::Vector& a, const ns3::Vector& b) -> ns3::Vector {
+        return ns3::Vector(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+    };
+
+    auto normalize = [](const ns3::Vector& vec) -> ns3::Vector {
+        double length = vec.GetLength();
+        return ns3::Vector(vec.x / length, vec.y / length, vec.z / length);
+    };
+
+    // Calculate incident vector (from node to IRS) and normalize
+    ns3::Vector incident = normalize(node - irs);
+
+    // Check if the node is on the correct side
+    double dotProduct = incident * irsNormal;
+    if (dotProduct <= 0)
+    {
+        // Node is on the wrong side of the IRS
+        return std::nullopt;
+    }
+
+    // Create a local coordinate system for the IRS
+    ns3::Vector z_axis = irsNormal;
+
+    ns3::Vector reference =
+        (std::abs(irsNormal.z) > 0.9) ? ns3::Vector(1, 0, 0) : ns3::Vector(0, 0, 1);
+    ns3::Vector x_axis = normalize(cross(reference, irsNormal));
+    ns3::Vector y_axis = cross(z_axis, x_axis);
+
+    // Project incident vector onto local coordinate system
+    double x = incident * x_axis;
+    double y = incident * y_axis;
+    double z = incident * z_axis;
+
+    // Calculate angles
+    double azimuth = std::atan2(y, x);
+    double inclination = std::acos(z); // Inclination: [0, π]
+    return Angles(azimuth, inclination);
+}
+
 void
 IrsPropagationLossModel::CalcIrsPaths()
 {
@@ -291,6 +337,8 @@ IrsPropagationLossModel::CalcIrsPaths()
                               Ptr<MobilityModel> mobility2,
                               Ptr<IrsModel> irsObj1,
                               Ptr<IrsModel> irsObj2) {
+        NS_ASSERT_MSG(mobility1 && mobility2, "Mobility Model can't be null.");
+        NS_ASSERT_MSG(irsObj1 && irsObj2, "IRS Model can't be null.");
         Vector pos1 = mobility1->GetPosition();
         Vector pos2 = mobility2->GetPosition();
         return (irsObj1->GetDirection() * (pos2 - pos1) > std::numeric_limits<double>::epsilon()) &&
@@ -342,20 +390,20 @@ IrsPropagationLossModel::CalcIrsPaths()
                         // For paths 3+ nodes, add IRS gain at intermediate nodes
                         if (currentPath.size() > 2 && i < currentPath.size() - 2)
                         {
-                            std::pair<double, double> angles = CalcAngles(
+                            auto angles = CalcAngles(
                                 mobility1->GetPosition(),
                                 currentPath[i + 2]->GetObject<MobilityModel>()->GetPosition(),
                                 mobility2->GetPosition(),
                                 irsObj2->GetDirection());
 
-                            if (angles.first < 0 || angles.second < 0)
+                            if (!angles)
                             {
                                 validPath = false;
                                 break;
                             }
                             loss += irsObj2
-                                        ->GetIrsEntry(std::round(angles.first),
-                                                      std::round(angles.second))
+                                        ->GetIrsEntry(std::round(angles->first),
+                                                      std::round(angles->second))
                                         .gain;
                         }
                     }
@@ -394,30 +442,55 @@ IrsPropagationLossModel::CalcPath(const IrsPath& path,
             (curr + 1 != path.end()) ? (*(curr + 1))->GetObject<MobilityModel>() : destination;
         Ptr<Node> irs = *curr;
 
-        // Calculate angles
-        std::pair<double, double> angles =
-            CalcAngles(prev->GetPosition(),
-                       next->GetPosition(),
-                       irs->GetObject<MobilityModel>()->GetPosition(),
-                       irs->GetObject<IrsModel>()->GetDirection());
-
-        // Skip if IRS is not in line of sight
-        if (angles.first < 0 || angles.second < 0)
+        Ptr<IrsModel> irsModel = irs->GetObject<IrsModel>();
+        if (dynamic_cast<IrsLookupModel*>(PeekPointer(irsModel)))
         {
-            return std::complex<double>(0.0, 0.0);
+            // Calculate angles
+            auto angles = CalcAngles(prev->GetPosition(),
+                                     next->GetPosition(),
+                                     irs->GetObject<MobilityModel>()->GetPosition(),
+                                     irs->GetObject<IrsModel>()->GetDirection());
+            if (!angles)
+            {
+                return std::complex<double>(0.0, 0.0);
+            }
+            // Get IRS impact from lookuptable
+            IrsEntry modifier =
+                irsModel->GetIrsEntry(std::round(angles->first), std::round(angles->second));
+            NS_LOG_INFO("IRS Gain (dBm): " << modifier.gain << " | IRS phase shift (radians): "
+                                           << modifier.phase_shift);
+            // add path lenght and phase shift
+            totalDistance += prev->GetDistanceFrom(irs->GetObject<MobilityModel>());
+            totalPhaseShift += modifier.phase_shift;
+            // calulate pathloss
+            pathLoss = m_irsLossModel->CalcRxPower(pathLoss, prev, irs->GetObject<MobilityModel>());
+            pathLoss += modifier.gain + m_rng->GetValue();
         }
-
-        // Get IRS impact from lookuptable
-        IrsEntry modifier = irs->GetObject<IrsModel>()->GetIrsEntry(std::round(angles.first),
-                                                                    std::round(angles.second));
-        NS_LOG_INFO("IRS Gain (dBm): " << modifier.gain
-                                       << " | IRS phase shift (radians): " << modifier.phase_shift);
-        // add path lenght and phase shift
-        totalDistance += prev->GetDistanceFrom(irs->GetObject<MobilityModel>());
-        totalPhaseShift += modifier.phase_shift;
-        // calulate pathloss
-        pathLoss = m_irsLossModel->CalcRxPower(pathLoss, prev, irs->GetObject<MobilityModel>());
-        pathLoss += modifier.gain + m_rng->GetValue();
+        else if (dynamic_cast<IrsSpectrumModel*>(PeekPointer(irsModel)))
+        {
+            // Calculate angles
+            auto anglesIn = CalcAngles3D(prev->GetPosition(),
+                                         irs->GetObject<MobilityModel>()->GetPosition(),
+                                         irs->GetObject<IrsModel>()->GetDirection());
+            auto anglesOut = CalcAngles3D(irs->GetObject<MobilityModel>()->GetPosition(),
+                                          next->GetPosition(),
+                                          irs->GetObject<IrsModel>()->GetDirection());
+            if (!anglesIn || !anglesOut)
+            {
+                return std::complex<double>(0.0, 0.0);
+            }
+            // Get IRS impact from lookuptable
+            IrsEntry modifier =
+                irsModel->GetIrsEntry(anglesIn.value(), anglesOut.value(), m_lambda);
+            NS_LOG_INFO("IRS Gain (dBm): " << modifier.gain << " | IRS phase shift (radians): "
+                                           << modifier.phase_shift);
+            // add path lenght and phase shift
+            totalDistance += prev->GetDistanceFrom(irs->GetObject<MobilityModel>());
+            totalPhaseShift += modifier.phase_shift;
+            // calulate pathloss
+            pathLoss = m_irsLossModel->CalcRxPower(pathLoss, prev, irs->GetObject<MobilityModel>());
+            pathLoss += modifier.gain + m_rng->GetValue();
+        }
     }
     totalDistance += path.back()->GetObject<MobilityModel>()->GetDistanceFrom(destination);
     pathLoss =

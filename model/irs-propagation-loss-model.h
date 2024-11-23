@@ -20,12 +20,18 @@
 #ifndef IRS_PROPAGATION_LOSS_MODEL_H
 #define IRS_PROPAGATION_LOSS_MODEL_H
 
+#include "ns3/angles.h"
 #include "ns3/node-container.h"
 #include "ns3/node.h"
 #include "ns3/propagation-loss-model.h"
 #include "ns3/vector.h"
 
 #include <complex>
+#include <optional>
+
+// friend classes to test private fuctions
+class IrsPropagationLossModelTestCase;
+class IrsPropagationLossModelHelperFunctionsTestCase;
 
 /**
  * \defgroup irs Intelligent Reflecting Surface (IRS) Models
@@ -153,12 +159,23 @@ class IrsPropagationLossModel : public PropagationLossModel
      * \return A pair of angles in degrees:
      *         - The angle of incidence.
      *         - The angle of reflection.
-     *         Returns (-1, -1) if A and B are on opposite sides of the IRS.
+     *         Returns nullopt if A and B are on opposite sides of the IRS.
      */
-    std::pair<double, double> CalcAngles(ns3::Vector a,
-                                         ns3::Vector b,
-                                         ns3::Vector irs,
-                                         ns3::Vector irsNormal) const;
+    std::optional<std::pair<double, double>> CalcAngles(ns3::Vector a,
+                                                        ns3::Vector b,
+                                                        ns3::Vector irs,
+                                                        ns3::Vector irsNormal) const;
+
+    /**
+     * \brief Compute angles of incidence with respect to the IRS.
+     * \param node Position of node (source or receiver).
+     * \param irs Position of the IRS.
+     * \param irsNormal Normal vector of the IRS.
+     * \return azimuth and elevation Angles - nullopt when not on correct side
+     */
+    std::optional<Angles> CalcAngles3D(ns3::Vector node,
+                                       ns3::Vector irs,
+                                       ns3::Vector irsNormal) const;
 
     /**
      * \brief Compute all possible signal paths involving IRS nodes.
@@ -195,9 +212,9 @@ class IrsPropagationLossModel : public PropagationLossModel
     double m_lambda = 0.05754;
     bool m_initialized = false;
 
-    // Friend classes to test private functions
-    friend class IrsPropagationLossModelTestCase;
-    friend class IrsPropagationLossModelHelperFunctionsTestCase;
+    // friend classes to test private functions
+    friend class ::IrsPropagationLossModelTestCase;
+    friend class ::IrsPropagationLossModelHelperFunctionsTestCase;
 };
 
 } // namespace ns3
