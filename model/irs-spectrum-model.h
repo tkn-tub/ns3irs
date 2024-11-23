@@ -96,6 +96,39 @@ class IrsSpectrumModel : public IrsModel
     double m_lambda;
     Eigen::VectorXcd m_rcoeffs;
     Eigen::MatrixX3d m_elementPos;
+
+    struct CacheKey
+    {
+        Angles in;
+        Angles out;
+        double lambda;
+
+        bool operator==(const CacheKey& other) const
+        {
+            constexpr double EPSILON = 1e-10;
+            return std::abs(in.GetAzimuth() - other.in.GetAzimuth()) < EPSILON &&
+                   std::abs(in.GetInclination() - other.in.GetInclination()) < EPSILON &&
+                   std::abs(out.GetAzimuth() - other.out.GetAzimuth()) < EPSILON &&
+                   std::abs(out.GetInclination() - other.out.GetInclination()) < EPSILON &&
+                   std::abs(lambda - other.lambda) < EPSILON;
+        }
+    };
+
+    struct CacheKeyHash
+    {
+        size_t operator()(const CacheKey& key) const
+        {
+            size_t h1 = std::hash<double>()(key.in.GetAzimuth());
+            size_t h2 = std::hash<double>()(key.in.GetInclination());
+            size_t h3 = std::hash<double>()(key.out.GetAzimuth());
+            size_t h4 = std::hash<double>()(key.out.GetInclination());
+            size_t h5 = std::hash<double>()(key.lambda);
+            return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3) ^ (h5 << 4);
+        }
+    };
+
+    // Cache storage
+    mutable std::unordered_map<CacheKey, IrsEntry, CacheKeyHash> m_cache;
 };
 
 } // namespace ns3

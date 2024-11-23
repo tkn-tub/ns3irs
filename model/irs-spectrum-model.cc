@@ -161,6 +161,16 @@ IrsSpectrumModel::CalcPhaseShift(double dApSta, double dApIrsSta, double delta) 
 IrsEntry
 IrsSpectrumModel::GetIrsEntry(Angles in, Angles out, double lambda) const
 {
+    // Create cache key
+    CacheKey key{in, out, lambda};
+
+    // Check if result is in cache
+    auto it = m_cache.find(key);
+    if (it != m_cache.end())
+    {
+        return it->second;
+    }
+
     Eigen::VectorXcd stv_in = CalcSteeringvector(in, lambda);
     Eigen::VectorXcd stv_out = CalcSteeringvector(out, lambda);
 
@@ -175,7 +185,9 @@ IrsSpectrumModel::GetIrsEntry(Angles in, Angles out, double lambda) const
 
     double shift = (signal_in.array().arg() - signal_ref.array().arg()).mean();
 
-    return IrsEntry(gain, shift);
+    IrsEntry result(gain, shift);
+    m_cache.emplace(key, result);
+    return result;
 }
 
 IrsEntry

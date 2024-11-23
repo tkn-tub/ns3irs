@@ -34,14 +34,18 @@
 #include <string>
 
 using namespace ns3;
+using namespace std;
+using namespace std::chrono;
 
 NS_LOG_COMPONENT_DEFINE("IrsSpectrumModelTest");
 
 class IrsSpectrumModelTestCase : public TestCase
 {
   public:
-    IrsSpectrumModelTestCase();
-    ~IrsSpectrumModelTestCase() override;
+    IrsSpectrumModelTestCase()
+        : TestCase("Compare results of IrsSpectrumModel to lookup table generated in Matlab.")
+    {
+    }
 
   private:
     void DoRun() override;
@@ -51,9 +55,9 @@ class IrsSpectrumModelTestCase : public TestCase
     {
         double freq;
         double lambda;
-        std::tuple<uint16_t, uint16_t> N;
-        std::tuple<double, double> d;
-        std::string lookuptable;
+        tuple<uint16_t, uint16_t> N;
+        tuple<double, double> d;
+        string lookuptable;
         uint8_t in_angle;
         uint8_t out_angle;
         double delta;
@@ -63,47 +67,37 @@ class IrsSpectrumModelTestCase : public TestCase
     TestVectors<TestVector> m_testVectors;
 };
 
-IrsSpectrumModelTestCase::IrsSpectrumModelTestCase()
-    : TestCase("Compare results of IrsPropagationLossModel to path loss formel specified by ETSI"),
-      m_testVectors()
-{
-}
-
-IrsSpectrumModelTestCase::~IrsSpectrumModelTestCase()
-{
-}
-
 Ptr<IrsLookupTable>
-SetLookupTable(std::string filename)
+SetLookupTable(string filename)
 {
     // Load Lookup Table from csv file
-    std::ifstream file(filename);
+    ifstream file(filename);
     NS_ABORT_MSG_IF(!file.is_open(), "IRS Lookup Table file not found.");
 
     // Create the lookup table
     Ptr<IrsLookupTable> irsLookupTable = CreateObject<IrsLookupTable>();
 
-    std::string line;
+    string line;
     // Skip the header
-    std::getline(file, line);
+    getline(file, line);
 
     // Read the data
-    while (std::getline(file, line))
+    while (getline(file, line))
     {
-        std::stringstream ss(line);
-        std::string item;
+        stringstream ss(line);
+        string item;
         uint8_t in_angle, out_angle;
         double gain, phase_shift;
 
         // Read each value separated by comma
-        std::getline(ss, item, ',');
-        in_angle = std::stoi(item);
-        std::getline(ss, item, ',');
-        out_angle = std::stoi(item);
-        std::getline(ss, item, ',');
-        gain = std::stod(item);
-        std::getline(ss, item, ',');
-        phase_shift = std::stod(item);
+        getline(ss, item, ',');
+        in_angle = stoi(item);
+        getline(ss, item, ',');
+        out_angle = stoi(item);
+        getline(ss, item, ',');
+        gain = stod(item);
+        getline(ss, item, ',');
+        phase_shift = stod(item);
 
         // Insert into the map
         irsLookupTable->Insert(in_angle, out_angle, gain, phase_shift);
@@ -140,9 +134,9 @@ IrsSpectrumModelTestCase::DoRun()
             "Direction",
             VectorValue(Vector(0, 1, 0)),
             "N",
-            TupleValue<UintegerValue, UintegerValue>({std::get<0>(tv.N), std::get<1>(tv.N)}),
+            TupleValue<UintegerValue, UintegerValue>({get<0>(tv.N), get<1>(tv.N)}),
             "Spacing",
-            TupleValue<DoubleValue, DoubleValue>({std::get<0>(tv.d), std::get<1>(tv.d)}),
+            TupleValue<DoubleValue, DoubleValue>({get<0>(tv.d), get<1>(tv.d)}),
             "Samples",
             UintegerValue(100),
             "Frequency",
@@ -156,54 +150,87 @@ IrsSpectrumModelTestCase::DoRun()
         irsNormal->SetDirection(Vector(0, 1, 0));
         irsNormal->SetLookupTable(SetLookupTable(tv.lookuptable));
 
-        for (int i = 1; i < 180; i += 200)
+        for (int i = 1; i < 180; ++i)
         {
-            for (int j = 1; j < 180; j += 200)
+            for (int j = 1; j < 180; ++j)
             {
                 IrsEntry newEntry;
                 IrsEntry oldEntry;
-                if ((i * j) % 333 == 0) // Sample every 20th run
-                {
-                    auto start = std::chrono::high_resolution_clock::now();
+                newEntry = irs->GetIrsEntry(Angles(DegreesToRadians(i), DegreesToRadians(0)),
+                                            Angles(DegreesToRadians(j), DegreesToRadians(0)),
+                                            tv.freq);
+                oldEntry = irsNormal->GetIrsEntry(i, j);
 
-                    // Call the new function
-                    newEntry = irs->GetIrsEntry(Angles(DegreesToRadians(i), DegreesToRadians(0)),
-                                                Angles(DegreesToRadians(j), DegreesToRadians(0)),
-                                                tv.freq);
-
-                    auto end = std::chrono::high_resolution_clock::now();
-                    std::chrono::duration<double> new_duration = end - start;
-
-                    start = std::chrono::high_resolution_clock::now();
-
-                    // Call the old function
-                    oldEntry = irsNormal->GetIrsEntry(i, j);
-
-                    end = std::chrono::high_resolution_clock::now();
-                    std::chrono::duration<double> old_duration = end - start;
-
-                    std::cout << "Sampled Angles (" << i << ", " << j << "): "
-                              << "Matrix time: " << new_duration.count() << "s | "
-                              << "Lookuptable time: " << old_duration.count() << "s" << std::endl;
-                }
-                else
-                {
-                    // Perform the comparison
-                    newEntry = irs->GetIrsEntry(Angles(DegreesToRadians(i), DegreesToRadians(0)),
-                                                Angles(DegreesToRadians(j), DegreesToRadians(0)),
-                                                tv.freq);
-                    oldEntry = irsNormal->GetIrsEntry(i, j);
-                }
-
-                NS_TEST_EXPECT_MSG_EQ_TOL(newEntry.gain, oldEntry.gain, 0.3, "Got unexpected gain");
+                NS_TEST_EXPECT_MSG_EQ_TOL(newEntry.gain, oldEntry.gain, 0.3, "Unexpected gain");
                 NS_TEST_EXPECT_MSG_EQ_TOL(newEntry.phase_shift,
                                           oldEntry.phase_shift,
                                           0.05,
-                                          "Got unexpected gain");
+                                          "Unexpected gain");
             }
         }
     }
 }
+
+class IrsSpectrumModelTestCaching : public TestCase
+{
+  public:
+    IrsSpectrumModelTestCaching()
+        : TestCase("Test the performance of the caching of the IrsSpectrumModel")
+    {
+    }
+
+    void DoRun() override
+    {
+        Ptr<IrsSpectrumModel> irs = CreateObjectWithAttributes<IrsSpectrumModel>(
+            "Direction",
+            VectorValue({0, 1, 0}),
+            "N",
+            TupleValue<UintegerValue, UintegerValue>({20, 20}),
+            "Spacing",
+            TupleValue<DoubleValue, DoubleValue>({0.028770869289827, 0.028770869289827}),
+            "Samples",
+            UintegerValue(100),
+            "Frequency",
+            DoubleValue(5.21e9));
+        irs->CalcRCoeffs(Angles(DegreesToRadians(135), DegreesToRadians(0)),
+                         Angles(DegreesToRadians(45), DegreesToRadians(0)));
+
+        double azimuth = 135.0;
+        double elevation = 45.0;
+        // Measure time for the first call (non-cached)
+        auto start = high_resolution_clock::now();
+        irs->GetIrsEntry(azimuth, elevation);
+        auto stop = high_resolution_clock::now();
+        auto uncachedDuration = duration_cast<nanoseconds>(stop - start).count();
+
+        // Measure time for subsequent calls (cached)
+        std::vector<long long> cachedDurations;
+        for (int i = 0; i < 20; ++i)
+        {
+            start = high_resolution_clock::now();
+            irs->GetIrsEntry(azimuth, elevation);
+            stop = high_resolution_clock::now();
+            cachedDurations.push_back(duration_cast<nanoseconds>(stop - start).count());
+        }
+
+        // Analyze results
+        long long avgCachedDuration = 0;
+        for (long long duration : cachedDurations)
+        {
+            avgCachedDuration += duration;
+        }
+        avgCachedDuration /= cachedDurations.size();
+
+        // Print results
+        NS_LOG_UNCOND("Time for first (non-cached) call: " << uncachedDuration << " ns");
+        NS_LOG_UNCOND("Average time for cached calls: " << avgCachedDuration << " ns");
+
+        // Test assertion to ensure caching is significantly faster
+        NS_TEST_ASSERT_MSG_LT(avgCachedDuration,
+                              uncachedDuration * 0.5,
+                              "Cached calls should be significantly faster than uncached calls");
+    }
+};
 
 class IrsSpectrumModelTestSuite : public TestSuite
 {
@@ -215,6 +242,7 @@ IrsSpectrumModelTestSuite::IrsSpectrumModelTestSuite()
     : TestSuite("irs-spectrum-model", Type::UNIT)
 {
     AddTestCase(new IrsSpectrumModelTestCase, TestCase::Duration::EXTENSIVE);
+    AddTestCase(new IrsSpectrumModelTestCaching, TestCase::Duration::QUICK);
 }
 
 /// Static variable for test initialization

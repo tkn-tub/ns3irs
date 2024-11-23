@@ -335,7 +335,6 @@ IrsPropagationLossModelHelperFunctionsTestCase::IrsPathsTest(const std::vector<V
             DoubleValue(5.21e9));
         irs->CalcRCoeffs(Angles(DegreesToRadians(in_angles[i]), DegreesToRadians(0)),
                          Angles(DegreesToRadians(out_angles[i]), DegreesToRadians(0)));
-        irs->SetDirection(directions[i]);
         irsNodes.Get(i)->AggregateObject(irs);
 
         positionAlloc->Add(positions[i]);
