@@ -1,6 +1,6 @@
-# *Extension of the ns3 Network Simulator to Support Intelligent Reflecting Surfaces*
+# Extension of the ns3 Network Simulator to Support Intelligent Reflecting Surfaces
 
-## Simulations Used in the Thesis
+## Simulations Conducted in this Thesis
 ### File Structure
 ```
 .
@@ -17,9 +17,10 @@
 ```
 
 ### Simulation Results and Data Processing
+**Ns3 must be compiled with the `--enable-examples` and `--enable-eigen` flags for the following to work.**
 
 #### **Figure 4.2: IRS Validation Results**
-> Simulation results for the scenario in Figure 4.1, showing SNR relative to IRS position. The IRS moves from near Tx to near Rx. Given a transmit power of P_{Tx} = 17 dB and a noise power of P_N = -94dB.
+> Simulation results for the scenario in Figure 4.1, showing SNR relative to IRS position. The IRS moves from near Tx to near Rx. Given a transmit power of P_Tx = 17 dB and a noise power of P_N = -94dB.
 
 ```bash
 $ ns3 run irs-optimal-placement
@@ -31,7 +32,7 @@ $ gnuplot optimal-irs-placement.plt
 ```
 
 #### **Table 4.1: IRS Validation Results**
-ns3 results are retrieved as below.
+Ns3 results are retrieved as shown below.
 Matlab results are simulated in `matlab/validationDifferentScenarios.m`
 
 #### **Figure 4.9 &  Table 4.2: IRS Validation Results**
