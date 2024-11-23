@@ -27,7 +27,7 @@ ylabel('In Angle (degrees)', 'FontSize', fontSize);
 % Adjust margins without cropping
 ax = gca;
 outerpos = ax.OuterPosition;
-ti = ax.TightInset; 
+ti = ax.TightInset;
 left = outerpos(1) + ti(1);
 bottom = outerpos(2) + ti(2);
 ax_width = outerpos(3) - ti(1) - ti(3);
@@ -55,7 +55,7 @@ ylabel('In Angle (degrees)', 'FontSize', fontSize);
 % Adjust margins without cropping
 ax = gca;
 outerpos = ax.OuterPosition;
-ti = ax.TightInset; 
+ti = ax.TightInset;
 left = outerpos(1) + ti(1);
 bottom = outerpos(2) + ti(2);
 ax_width = outerpos(3) - ti(1) - ti(3);

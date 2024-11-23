@@ -1,16 +1,16 @@
 classdef (Sealed,StrictDefaults) LogDistancePL < phased.internal.AbstractFreeSpace
 
-    properties (Nontunable) 
+    properties (Nontunable)
         Exponent = 3.0
         ReferenceDistance = 1.0
         ReferenceLoss = 46.6777
     end
-    
+
     properties (Access = private, Nontunable)
         %Fractional delay filter
         cFractionalDelayFilter
     end
-    
+
     methods
         function obj = LogDistancePL(varargin)
             obj@phased.internal.AbstractFreeSpace(varargin{:});
@@ -24,7 +24,7 @@ classdef (Sealed,StrictDefaults) LogDistancePL < phased.internal.AbstractFreeSpa
             obj.pLambda = obj.PropagationSpeed/obj.OperatingFrequency;
             obj.cFractionalDelayFilter = dsp.VariableFractionalDelay;
         end
-        
+
         function releaseImpl(obj)
             releaseImpl@phased.internal.AbstractFreeSpace(obj);
             release(obj.cFractionalDelayFilter);
@@ -44,7 +44,7 @@ classdef (Sealed,StrictDefaults) LogDistancePL < phased.internal.AbstractFreeSpa
 
         function s = loadSubObjects(obj,s,wasLocked)
             s = loadSubObjects@phased.internal.AbstractFreeSpace(obj,s,wasLocked);
-            if wasLocked 
+            if wasLocked
                 if isfield(s,'cFractionalDelayFilter')
                     obj.cFractionalDelayFilter = ...
                         dsp.VariableFractionalDelay.loadobj(s.cFractionalDelayFilter);
@@ -73,18 +73,18 @@ classdef (Sealed,StrictDefaults) LogDistancePL < phased.internal.AbstractFreeSpa
             temp = step(obj.cFractionalDelayFilter,complex(x),fracd);
             xbuf_in = temp(:,1:size(x,2));
         end
-        
+
         function [y,propdelay] = computeMultiplePropagatedSignal(obj,x,...
                 ncol_per_path,numOfPropPaths,startLoc,endLoc,baseVel,targetVel,Fs)
-            
+
             y = complex(zeros(size(x)));
             k = obj.pRangeFactor;
             lambda = obj.pLambda;
-            
+
             % Get propagation delays and distances
             [propdelay,propdistance,rspeed] = computePropagationDelayVelocity(...
                 obj,startLoc,endLoc,baseVel,targetVel);
-            
+
             % Calculate log-distance path loss for each path
             if propdistance <= obj.ReferenceDistance
                 logd_loss = -obj.ReferenceLoss;
@@ -92,15 +92,15 @@ classdef (Sealed,StrictDefaults) LogDistancePL < phased.internal.AbstractFreeSpa
                 pathLoss = 10 * obj.Exponent *log10(propdistance/obj.ReferenceDistance);
                 logd_loss = -obj.ReferenceLoss - pathLoss;
             end
-            
+
             % Convert path loss to linear scale
             plossfactor = sqrt(db2pow(-logd_loss));
-            
+
             for pIdx = 1:numOfPropPaths
                 colidx = (pIdx-1)*ncol_per_path+(1:ncol_per_path);
                 y(:,colidx) = exp(-1i*2*pi*k*propdistance(pIdx)/lambda)/plossfactor(pIdx)*...
                         bsxfun(@times,x(:,colidx),...
-                               exp(1i*2*pi*k*rspeed(pIdx)/lambda*(propdelay(pIdx)+(0:size(x,1)-1)'/Fs)));                    
+                               exp(1i*2*pi*k*rspeed(pIdx)/lambda*(propdelay(pIdx)+(0:size(x,1)-1)'/Fs)));
             end
         end
 
@@ -108,13 +108,13 @@ classdef (Sealed,StrictDefaults) LogDistancePL < phased.internal.AbstractFreeSpa
         function setRangeFactor(obj)
             obj.pRangeFactor = 1;
         end
-        
+
         function validateNumberOfPositionPairs(obj,x,startLocSize,endLocSize) %#ok<INUSL>
             coder.extrinsic('mat2str');
-            coder.extrinsic('num2str');            
+            coder.extrinsic('num2str');
 
             numPosPairs = size(x,2);
-            
+
             if numPosPairs == 1
                 expDim = '[3 ';
             else
@@ -136,23 +136,23 @@ classdef (Sealed,StrictDefaults) LogDistancePL < phased.internal.AbstractFreeSpa
                         [expDim num2str(numPosPairs) ']'], ...
                                mat2str(endLocSize));
             end
-            
+
             cond =   ~(isequal(startLocSize,[3 numPosPairs]) || ...
                       isequal(endLocSize,[3 numPosPairs]));
             if cond
                 coder.internal.errorIf(cond, ...
                      'phased:phased:FreeSpace:AtLeastOneNotColumnVect','Pos1','Pos2',numPosPairs);
             end
-            
+
             cond = ~ (isequal(startLocSize,[3 1]) || isequal(endLocSize,[3 1]));
             if cond
                 coder.internal.errorIf(cond, ...
                      'phased:phased:FreeSpace:AtLeastOneColumnVect','Pos1','Pos2');
             end
-            
+
         end
     end
-    
+
     methods (Access = protected, Static, Hidden)
         function header = getHeaderImpl
           header = matlab.system.display.Header(...
@@ -185,12 +185,12 @@ classdef (Sealed,StrictDefaults) LogDistancePL < phased.internal.AbstractFreeSpa
             end
         end
     end
-    
+
     methods (Access = protected)
-                
+
         function str = getIconImpl(obj) %#ok<MANU>
             str = sprintf('Free Space\nChannel');
         end
     end
-    
+
 end

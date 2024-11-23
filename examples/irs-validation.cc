@@ -423,11 +423,11 @@ main(int argc, char* argv[])
 
     if (debug)
     {
-        ns3::LogComponentEnable("IrsPropagationLossModel", ns3::LOG_LEVEL_ALL);
+        LogComponentEnable("IrsPropagationLossModel", LOG_LEVEL_ALL);
     }
     if (verbose)
     {
-        ns3::LogComponentEnable("IrsValidation", ns3::LOG_LEVEL_ALL);
+        LogComponentEnable("IrsValidation", LOG_LEVEL_ALL);
     }
 
     if (scenario == "LOS")

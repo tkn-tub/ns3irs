@@ -107,7 +107,7 @@ RunSimulation(bool useIRS,
     positionAlloc->Add(Vector(0.0, 0.0, 0.0));
     positionAlloc->Add(Vector(50.0, 0.0, 0.0));
     positionAlloc->Add(Vector(100.0, 0.0, 0.0));
-    positionAlloc->Add(Vector(1.0, -1.0, 0.0));
+    positionAlloc->Add(Vector(0.7, -0.7, 0.0));
     mobility.SetPositionAllocator(positionAlloc);
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobility.Install(nodes);
@@ -116,6 +116,7 @@ RunSimulation(bool useIRS,
     // Create propagation loss matrix
     Ptr<LogDistancePropagationLossModel> lossModel =
         CreateObject<LogDistancePropagationLossModel>();
+    lossModel->SetPathLossExponent(3);
 
     // Create & setup wifi channel
     Ptr<YansWifiChannel> wifiChannel = CreateObject<YansWifiChannel>();
@@ -124,17 +125,18 @@ RunSimulation(bool useIRS,
         IrsLookupHelper irsHelper;
         irsHelper.SetDirection(Vector(0, 1, 0));
         irsHelper.SetLookupTable(
-            "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT89_FREQ5.18GHz_hidden_node.csv");
+            "contrib/irs/examples/lookuptables/IRS_625_IN135_OUT90_FREQ5.15GHz_hidden_node.csv");
         irsHelper.Install(irsNode);
 
-        Ptr<FriisPropagationLossModel> irsModel = CreateObject<FriisPropagationLossModel>();
-        irsModel->SetFrequency(5.18e9);
+        Ptr<LogDistancePropagationLossModel> irsModel =
+            CreateObject<LogDistancePropagationLossModel>();
+        irsModel->SetPathLossExponent(3);
 
         Ptr<IrsPropagationLossModel> irsLossModel = CreateObject<IrsPropagationLossModel>();
         irsLossModel->SetIrsNodes(&irsNode);
         irsLossModel->SetIrsPropagationModel(irsModel);
         irsLossModel->SetLosPropagationModel(lossModel);
-        irsLossModel->SetFrequency(5.18e9);
+        irsLossModel->SetFrequency(5.15e9);
 
         wifiChannel->SetPropagationLossModel(irsLossModel);
     }
@@ -299,7 +301,7 @@ main(int argc, char** argv)
     }
 
     // Open plot file
-    std::ofstream plotFile("hidden_node_problem_throughput.plt");
+    std::ofstream plotFile("contrib/irs/results_and_scripts/hidden_node_problem_throughput.plt");
     plot.GenerateOutput(plotFile);
     plotFile.close();
 

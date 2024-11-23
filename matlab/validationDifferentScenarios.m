@@ -10,7 +10,7 @@ dc = 0.5*lambda;
 
 % values from ns3
 txPower = 16.0206;
-noise = -87.9454;
+noise = -87.5;
 
 % construct surface
 ris = helperRISSurface('Size',[Nr Nc],'ElementSpacing',[dr dc],...
@@ -88,52 +88,72 @@ ylosris = chanRISToUE(x_ris_out,pos_ris,pos_ue,v,v) + chanAPToUE(xt, pos_ap, pos
 risCSNR = txPower + pow2db(bandpower(ylosris)) - noise;
 disp("IRS Destructive + LOS: "  + risCSNR);
 
-% Scenario 4: MultiIrs + LOS
+% Scenario 4: Multi-IRS + LOS
 pos_ris1 = [0.7; 0.7; 0];
 pos_ris2 = [49.3; -0.7; 0];
 
 % Calculate distances and angles for each path
-[r_ap_ris1,ang_ap_ris1,r_ue_ris1,ang_ue_ris1] = calcangle(pos_ap, pos_ue, pos_ris, [0,-1,0]);
-[r_ap_ris2,ang_ap_ris2,r_ue_ris2,ang_ue_ris2] = calcangle(pos_ap, pos_ue, pos_ris, [0,1,0]);
-[r_ap_ris1,ang_ap_ris1,~,ang_ris1_ris2] = calcangle(pos_ap, pos_ris2, pos_ris1, [0,-1,0]);
-[r_ris1_ris2,ang_ris2_ris1,r_ris2_ue,ang_ris2_ue] = calcangle(pos_ris1, pos_ue, pos_ris2, [0,1,0]);
-
-g = stv(fc, ang_ap_ris);
-hr = stv(fc, ang_ue_ris);
+[r_ap_ris1, ang_ap_ris1, r_ris1_ue, ang_ris1_ue] = calcangle(pos_ap, pos_ue, pos_ris1, [0, -1, 0]);
+[r_ap_ris2, ang_ap_ris2, r_ris2_ue, ang_ris2_ue] = calcangle(pos_ap, pos_ue, pos_ris2, [0, 1, 0]);
+[r_ris1_ris2,ang_ris2_ris1,~,~] = calcangle(pos_ris1, pos_ue, pos_ris2, [0,1,0]);
+[~,~,~,ang_ris1_ris2] = calcangle(pos_ap, pos_ris2, pos_ris1, [0,-1,0]);
 
 direct_path_phase = (2 * pi * 50) / lambda;
 reflected_path_phase = (2 * pi * (r_ap_ris1 + r_ris1_ris2 + r_ris2_ue)) / lambda;
 required_phase_shift =  (reflected_path_phase - direct_path_phase) / 2;
-rcoeff_ris = exp(1i * (wrapToPi(required_phase_shift) - angle(hr) - angle(g)));
 
-% Path 1: Direct Path (ap -> ue)
+% Steering vector calculations
+g = stv(fc, ang_ap_ris1);
+hr = stv(fc, ang_ris1_ris2);
+
+% Direct path phase
+direct_path_phase = (2 * pi * 50) / lambda;  % Assuming 50 is the distance in meters
+rcoeff_ris1 = exp(1i * (wrapToPi(required_phase_shift) - angle(hr) - angle(g)));
+
+% Steering vector for RIS2
+g = stv(fc, ang_ris2_ris1);
+hr = stv(fc, ang_ris2_ue);
+
+% Reflection coefficient for RIS2
+rcoeff_ris2 = exp(1i * (wrapToPi(required_phase_shift) - angle(hr) - angle(g)));
+
+% Path 1: Direct Path (AP -> UE)
 path_direct = chanAPToUE(xt, pos_ap, pos_ue, v, v);
 
-% Path 2: ap -> ris1 -> ue
+% Path 2: AP -> RIS1 -> UE
 x_ris_in1 = chanAPToRIS(xt, pos_ap, pos_ris1, v, v);
-x_ris_out1 = ris(x_ris_in1, ang_ap_ris1, ang_ue_ris1, rcoeff_ris);
+x_ris_out1 = ris(x_ris_in1, ang_ap_ris1, ang_ris1_ue, rcoeff_ris1);
 path_ris1 = chanRISToUE(x_ris_out1, pos_ris1, pos_ue, v, v);
 
-% Path 3: ap -> ris2 -> ue
+% Path 3: AP -> RIS2 -> UE
 x_ris_in2 = chanAPToRIS(xt, pos_ap, pos_ris2, v, v);
-x_ris_out2 = ris(x_ris_in2, ang_ap_ris2, ang_ue_ris2, rcoeff_ris);
+x_ris_out2 = ris(x_ris_in2, ang_ap_ris2, ang_ris2_ue, rcoeff_ris2);
 path_ris2 = chanRISToUE(x_ris_out2, pos_ris2, pos_ue, v, v);
 
-% Path 4: ap -> ris1 -> ris2 -> ue
+% Path 4: AP -> RIS1 -> RIS2 -> UE
 x_ris_in1_ris2 = chanAPToRIS(xt, pos_ap, pos_ris1, v, v);
-x_ris_out1_ris2 = ris(x_ris_in1_ris2, ang_ap_ris1, ang_ris1_ris2, rcoeff_ris);
+x_ris_out1_ris2 = ris(x_ris_in1_ris2, ang_ap_ris1, ang_ris1_ris2, rcoeff_ris1);
 x_ris_in2_ris2 = chanRISToRis(x_ris_out1_ris2, pos_ris1, pos_ris2, v, v);
-x_ris_out2_ris2 = ris(x_ris_in2_ris2, ang_ris1_ris2, ang_ris2_ue, rcoeff_ris);
+x_ris_out2_ris2 = ris(x_ris_in2_ris2, ang_ris2_ris1, ang_ris2_ue, rcoeff_ris2);
 path_ris1_ris2 = chanRISToUE(x_ris_out2_ris2, pos_ris2, pos_ue, v, v);
 
-% Path 5: ap -> ris2 -> ris1 -> ue
+% Path 5: AP -> RIS2 -> RIS1 -> UE
 x_ris_in2_ris1 = chanAPToRIS(xt, pos_ap, pos_ris2, v, v);
-x_ris_out2_ris1 = ris(x_ris_in2_ris1, ang_ap_ris2, ang_ris2_ris1, rcoeff_ris);
+x_ris_out2_ris1 = ris(x_ris_in2_ris1, ang_ap_ris2, ang_ris2_ris1, rcoeff_ris2);
 x_ris_in2_ris2 = chanRISToRis(x_ris_out2_ris1, pos_ris2, pos_ris1, v, v);
-x_ris_out1_ris1 = ris(x_ris_in2_ris2, ang_ris2_ris1, ang_ris2_ue, rcoeff_ris);
+x_ris_out1_ris1 = ris(x_ris_in2_ris2, ang_ris1_ris2, ang_ris1_ue, rcoeff_ris1);
 path_ris2_ris1 = chanRISToUE(x_ris_out1_ris1, pos_ris1, pos_ue, v, v);
 
 % Sum all paths
 ylosris = path_direct + path_ris1 + path_ris2 + path_ris1_ris2 + path_ris2_ris1;
 
+% debug info
+% disp(['Path Direct: ', num2str(txPower + pow2db(bandpower(path_direct))), ' phase: ', num2str(mean(angle(path_direct)))]);
+% disp(['Path RIS1: ', num2str(txPower + pow2db(bandpower(path_ris1)))]);
+% disp(['Path RIS2: ', num2str(txPower + pow2db(bandpower(path_ris2)))]);
+% disp(['Path RIS1 → RIS2: ', num2str(txPower + pow2db(bandpower(path_ris1_ris2))), ' phase: ', num2str(mean(angle(path_ris1_ris2)))]);
+% disp(['Path RIS2 → RIS1: ', num2str(txPower + pow2db(bandpower(path_ris2_ris1))), ' phase: ', num2str(mean(angle(path_ris2_ris1)))]);
+% disp(['Result: ', num2str(txPower + pow2db(bandpower(ylosris)))]);
+
+risMultiSNR = txPower + pow2db(bandpower(ylosris)) - noise;
 disp("MultiIRS: " + risMultiSNR);

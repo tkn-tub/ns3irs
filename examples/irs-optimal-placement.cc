@@ -97,53 +97,15 @@ writeResultsToCSV(const std::string& filename, const std::vector<SimulationResul
     file.close();
 }
 
-std::vector<SimulationResult>
-calculateAverageResults(const std::vector<std::vector<SimulationResult>>& allResults)
-{
-    std::vector<SimulationResult> averageResults;
-
-    if (allResults.empty())
-    {
-        return averageResults;
-    }
-
-    size_t numPositions = allResults[0].size();
-    size_t numSimulations = allResults.size();
-
-    for (size_t i = 0; i < numPositions; ++i)
-    {
-        SimulationResult avgResult;
-        avgResult.irs_x = allResults[0][i].irs_x;
-
-        double sum_only_irs = 0.0;
-        double sum_irs_los = 0.0;
-
-        for (const auto& simulation : allResults)
-        {
-            sum_only_irs += simulation[i].only_irs;
-            sum_irs_los += simulation[i].irs_los;
-        }
-
-        avgResult.only_irs = sum_only_irs / numSimulations;
-        avgResult.irs_los = sum_irs_los / numSimulations;
-
-        averageResults.push_back(avgResult);
-    }
-
-    return averageResults;
-}
-
 int
 main(int argc, char* argv[])
 {
-    uint16_t n = 1;
     double frequency = 5.21e9;
     double txPowerDbm = 17;
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("freq", "Frequency the nodes are communicating on", frequency);
     cmd.AddValue("txPower", "Power the transmitter is sending with. (in dBm)", txPowerDbm);
-    cmd.AddValue("n", "Amount of times to run the simulation.", n);
 
     cmd.Parse(argc, argv);
 
@@ -166,36 +128,32 @@ main(int argc, char* argv[])
     irsLossModel->SetFrequency(frequency);
     irsLossModel->SetSystemLoss(1);
 
-    for (int sim = 0; sim < n; ++sim)
+    std::vector<SimulationResult> simulationResults;
+    int i = 0;
+    for (double pos_irs = 0; pos_irs <= 15; pos_irs += 0.5)
     {
-        std::vector<SimulationResult> simulationResults;
-        int i = 0;
-        for (double pos_irs = 0; pos_irs <= 15; pos_irs += 0.5)
-        {
-            irs->SetPosition(Vector(pos_irs, -1, 0));
-            irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/changeRisPos/" +
-                                     irs_lookup_table[i]);
-            irsHelper.Install(irsNode);
+        irs->SetPosition(Vector(pos_irs, -1, 0));
+        irsHelper.SetLookupTable("contrib/irs/examples/lookuptables/changeRisPos/" +
+                                 irs_lookup_table[i]);
+        irsHelper.Install(irsNode);
 
-            Ptr<IrsPropagationLossModel> lossModel = CreateObject<IrsPropagationLossModel>();
-            lossModel->SetFrequency(frequency);
-            lossModel->SetIrsNodes(&irsNode);
-            lossModel->SetIrsPropagationModel(irsLossModel);
+        Ptr<IrsPropagationLossModel> lossModel = CreateObject<IrsPropagationLossModel>();
+        lossModel->SetFrequency(frequency);
+        lossModel->SetIrsNodes(&irsNode);
+        lossModel->SetIrsPropagationModel(irsLossModel);
 
-            SimulationResult result;
+        SimulationResult result;
 
-            result.irs_x = pos_irs;
-            result.only_irs = lossModel->CalcRxPower(txPowerDbm, a, b);
+        result.irs_x = pos_irs;
+        result.only_irs = lossModel->CalcRxPower(txPowerDbm, a, b);
 
-            lossModel->SetLosPropagationModel(irsLossModel);
-            result.irs_los = lossModel->CalcRxPower(txPowerDbm, a, b);
-            simulationResults.push_back(result);
+        lossModel->SetLosPropagationModel(irsLossModel);
+        result.irs_los = lossModel->CalcRxPower(txPowerDbm, a, b);
+        simulationResults.push_back(result);
 
-            i++;
-        }
-        allSimulationResults.push_back(simulationResults);
+        i++;
     }
 
-    std::vector<SimulationResult> averageResults = calculateAverageResults(allSimulationResults);
-    writeResultsToCSV("optimal_ris_placement_ns3.csv", averageResults);
+    writeResultsToCSV("contrib/irs/results_and_scripts/optimal_irs_placement_ns3.csv",
+                      simulationResults);
 }

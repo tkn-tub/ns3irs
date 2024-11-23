@@ -1,6 +1,3 @@
-% Static AP/UE moving RIS on x axes + calculating optimal phase shift to
-% find optimal placement
-
 fc = 5.21e9;
 c = physconst('lightspeed');
 lambda = c/fc;
@@ -23,11 +20,9 @@ ris = helperRISSurface('Size',[Nr Nc],'ElementSpacing',[dr dc],...
 d_ap_ue = 15;
 pos_ap = [0;0;0];
 pos_ue = [d_ap_ue;0;0];
-
 v = zeros(3,1);
 
 step_size = 0.5;
-
 x_ris_range = 0:step_size:d_ap_ue;
 
 % Initialize arrays to store the results
@@ -36,7 +31,6 @@ ris_array = zeros(size(x_ris_range));
 los_array = zeros(size(x_ris_range));
 ris_etsi_array = zeros(size(x_ris_range));
 ris_etsi_array2 = zeros(size(x_ris_range));
-
 
 % signal
 fs = 10e6;
@@ -48,11 +42,8 @@ chanRISToUE = phased.FreeSpace('SampleRate',fs,'PropagationSpeed',c,'MaximumDist
 chanAPToUE = phased.FreeSpace('SampleRate',fs,'PropagationSpeed',c,'MaximumDistanceSource','Property','MaximumDistance',500,'OperatingFrequency',fc);
 
 stv = getSteeringVector(ris);
-% LOS path propagation
-
 yref = chanAPToUE(xt,pos_ap,pos_ue,v,v);
 RXpowerLos = pow2db(bandpower(yref)) - txPower;
-% Loop through different d_rx values
 for i = 1:length(x_ris_range)
     pos_ris = [x_ris_range(i); -1; 0];
 
@@ -69,11 +60,14 @@ for i = 1:length(x_ris_range)
     rcoeff_ris = exp(1i * (wrapToPi(required_phase_shift) - angle(hr) - angle(g)));
 
     x_ris_in = chanAPToRIS(xt,pos_ap,pos_ris,v,v);
+    disp(pow2db(bandpower(x_ris_in)));
     x_ris_out = ris(x_ris_in,ang_ap_ris,ang_ue_ris,rcoeff_ris);
+    disp(pow2db(bandpower(x_ris_out)));
     ylosris = chanRISToUE(x_ris_out,pos_ris,pos_ue,v,v) + yref;
     RXpowerRis = pow2db(bandpower(ylosris)) - txPower;
 
     ylosris = chanRISToUE(x_ris_out,pos_ris,pos_ue,v,v);
+    disp(pow2db(bandpower(ylosris)))
     RXpowerOnlyRis = pow2db(bandpower(ylosris)) - txPower;
 
     risA = 1;
@@ -86,51 +80,21 @@ for i = 1:length(x_ris_range)
 
     ris_etsi_array2(i) = pow2db(abs(totalPower)^2);
 
-
     onlyris_array(i) = RXpowerOnlyRis;
     ris_array(i) = RXpowerRis;
     los_array(i) = RXpowerLos;
-
 end
-% Plot the results
-figure;
-
-hold on;
-plot(x_ris_range, ris_array-noise, 'r', 'LineWidth', 2.5);
-plot(x_ris_range, los_array-noise, 'k--', 'LineWidth', 2.5);
-plot(x_ris_range, onlyris_array-noise, 'b', 'LineWidth', 2.5);
-plot(x_ris_range, ris_etsi_array-noise, 'c--', 'LineWidth', 2.5);
-plot(x_ris_range, ris_etsi_array2-noise, 'c--', 'LineWidth', 2.5);
-plot(optimalrisplacementns3.irs_x, optimalrisplacementns3.only_irs-noise, 'm-o', 'LineWidth', 2.5, 'MarkerSize', 8);
-plot(optimalrisplacementns3.irs_x, optimalrisplacementns3.irs_los-noise, 'g-o', 'LineWidth', 2.5, 'MarkerSize', 8);
-
-% Increase font size for labels and title
-xlabel('x pos [m]', 'FontSize', 20, 'FontWeight', 'bold');
-ylabel('SNR [dBm]', 'FontSize', 20, 'FontWeight', 'bold');
-title(sprintf('SNR vs. Position of RIS for N = %d (%d x %d)', Nr*Nc, Nr, Nc), 'FontSize', 12, 'FontWeight', 'bold');
-
-% Enhance legend and grid
-legend('RIS + LOS', 'LOS', 'RIS', 'RIS ETSI', 'RIS+LOS ETSI', 'RIS (Ns3)', 'RIS + LOS (Ns3)', 'FontSize', 12, 'Location', 'Best');
-grid on;
-
-% Improve overall figure appearance
-set(gca, 'LineWidth', 1.5, 'FontSize', 18);
-set(gcf, 'Color', 'w');
-
 % Ensure all arrays are column vectors
-% x_ris_range = x_ris_range(:);
-% ris_array = ris_array(:);
-% los_array = los_array(:);
-% onlyris_array = onlyris_array(:);
-% ris_etsi_array = ris_etsi_array(:);
-% optimalrisplacementns3.ris_x = optimalrisplacementns3.ris_x(:);
-% optimalrisplacementns3.only_irs = optimalrisplacementns3.only_irs(:);
-% optimalrisplacementns3.irs_los = optimalrisplacementns3.irs_los(:);
-%
-%
-% % Combine all relevant data into a matrix
-% data = [x_ris_range, ris_array - noise, los_array - noise, onlyris_array - noise, ris_etsi_array - noise, ...
-%         optimalrisplacementns3.ris_x, optimalrisplacementns3.only_irs - noise, optimalrisplacementns3.irs_los - noise];
-%
-% % Write the data to a CSV file or a text file
-% csvwrite('plot_data.csv', data);
+x_ris_range = x_ris_range(:);
+ris_array = ris_array(:);
+los_array = los_array(:);
+onlyris_array = onlyris_array(:);
+ris_etsi_array = ris_etsi_array(:);
+optimalirsplacementns3.irs_x = optimalirsplacementns3.irs_x(:);
+optimalirsplacementns3.only_irs = optimalirsplacementns3.only_irs(:);
+optimalirsplacementns3.irs_los = optimalirsplacementns3.irs_los(:);
+
+data = [x_ris_range, ris_array - noise, los_array - noise, onlyris_array - noise, ris_etsi_array - noise, ...
+        optimalirsplacementns3.irs_x, optimalirsplacementns3.only_irs - noise, optimalirsplacementns3.irs_los - noise];
+
+csvwrite('../results_and_scripts/optimal-irs-placement.csv', data);
