@@ -86,6 +86,7 @@ IrsSpectrumModel::CalcRCoeffs(double dApSta,
                               double delta)
 {
     m_elementPos = CalcElementPositions();
+    m_cache.clear();
 
     Eigen::VectorXcd stv_in = CalcSteeringvector(inAngle, m_lambda).array().arg();
     Eigen::VectorXcd stv_out = CalcSteeringvector(outAngle, m_lambda).array().arg();
