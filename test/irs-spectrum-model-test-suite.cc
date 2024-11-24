@@ -132,7 +132,7 @@ IrsSpectrumModelTestCase::DoRun()
 
         Ptr<IrsSpectrumModel> irs = CreateObjectWithAttributes<IrsSpectrumModel>(
             "Direction",
-            VectorValue(Vector(0, 1, 0)),
+            VectorValue({0, 1, 0}),
             "N",
             TupleValue<UintegerValue, UintegerValue>({get<0>(tv.N), get<1>(tv.N)}),
             "Spacing",
