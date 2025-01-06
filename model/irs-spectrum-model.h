@@ -97,6 +97,30 @@ class IrsSpectrumModel : public IrsModel
     void CalcRCoeffs(Angles inAngle, Angles outAngle);
 
     /**
+     * \brief Set reflection coefficients.
+     * \param A vector of complex reflection coefficients
+     */
+    void SetRcoeffs(Eigen::VectorXcd rcoeffs);
+
+    /**
+     * \brief Retrieve the calculated reflection coefficients.
+     * \return A vector of complex reflection coefficients
+     */
+    Eigen::VectorXcd GetRcoeffs() const;
+
+    /**
+     * \brief Set element positions.
+     * \param A matrix of element positions
+     */
+    void SetElementPos(Eigen::MatrixX3d positions);
+
+    /**
+     * \brief Retrieve the calculated reflection coefficients.
+     * \return A vector of complex reflection coefficients
+     */
+    Eigen::MatrixX3d GetElementPos() const;
+
+    /**
      * \brief Set the number of IRS elements along each dimension.
      * \param N Tuple containing the number of rows (Nr) and columns (Nc)
      */
@@ -133,12 +157,6 @@ class IrsSpectrumModel : public IrsModel
     uint16_t GetSamples() const;
 
     /**
-     * \brief Retrieve the calculated reflection coefficients.
-     * \return A vector of complex reflection coefficients
-     */
-    Eigen::VectorXcd GetRcoeffs() const;
-
-    /**
      * \brief Set the carrier frequency for IRS calculations.
      * \param frequency Carrier frequency in Hz
      */
@@ -149,15 +167,6 @@ class IrsSpectrumModel : public IrsModel
      * \return Carrier frequency in Hz
      */
     double GetFrequency() const;
-
-  private:
-    /**
-     * \brief Calculate the wave vector based on angles and wavelength.
-     * \param angle Incident or reflection angles
-     * \param lambda Wavelength in meters
-     * \return A wave vector
-     */
-    Eigen::Vector3d CalcWaveVector(Angles angle, double lambda) const;
 
     /**
      * \brief Calculate the positions of IRS elements in 3D space.
@@ -171,7 +180,9 @@ class IrsSpectrumModel : public IrsModel
      * \param lambda Wavelength in meters
      * \return A vector representing the steering vector
      */
-    Eigen::VectorXcd CalcSteeringvector(Angles angle, double lambda) const;
+    Eigen::VectorXcd CalcSteeringvector(Angles angle,
+                                        double lambda,
+                                        Eigen::MatrixX3d elementPos) const;
 
     /**
      * \brief Calculate the phase shift for a given configuration.
@@ -181,6 +192,15 @@ class IrsSpectrumModel : public IrsModel
      * \return Phase shift in radians
      */
     double CalcPhaseShift(double dApSta, double dApIrsSta, double delta) const;
+
+  private:
+    /**
+     * \brief Calculate the wave vector based on angles and wavelength.
+     * \param angle Incident or reflection angles
+     * \param lambda Wavelength in meters
+     * \return A wave vector
+     */
+    Eigen::Vector3d CalcWaveVector(Angles angle, double lambda) const;
 
     uint16_t m_Nr;
     uint16_t m_Nc;

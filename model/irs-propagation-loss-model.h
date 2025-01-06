@@ -142,9 +142,9 @@ class IrsPropagationLossModel : public PropagationLossModel
      *         Returns nullopt if A and B are on opposite sides of the IRS.
      */
     static std::optional<std::pair<double, double>> CalcAngles(ns3::Vector a,
-                                                        ns3::Vector b,
-                                                        ns3::Vector irs,
-                                                        ns3::Vector irsNormal);
+                                                               ns3::Vector b,
+                                                               ns3::Vector irs,
+                                                               ns3::Vector irsNormal);
 
     /**
      * \brief Compute angles of incidence with respect to the IRS.
@@ -154,8 +154,8 @@ class IrsPropagationLossModel : public PropagationLossModel
      * \return azimuth and elevation Angles - nullopt when not on correct side
      */
     static std::optional<Angles> CalcAngles3D(ns3::Vector node,
-                                       ns3::Vector irs,
-                                       ns3::Vector irsNormal);
+                                              ns3::Vector irs,
+                                              ns3::Vector irsNormal);
 
     /**
      * IRS paths are represented as strings of the form "[Node1->Node2]".

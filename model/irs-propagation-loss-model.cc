@@ -286,9 +286,7 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector a,
 }
 
 std::optional<Angles>
-IrsPropagationLossModel::CalcAngles3D(ns3::Vector node,
-                                      ns3::Vector irs,
-                                      ns3::Vector irsNormal)
+IrsPropagationLossModel::CalcAngles3D(ns3::Vector node, ns3::Vector irs, ns3::Vector irsNormal)
 {
     auto cross = [](const ns3::Vector& a, const ns3::Vector& b) -> ns3::Vector {
         return ns3::Vector(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);

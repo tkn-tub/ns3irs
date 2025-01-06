@@ -19,6 +19,8 @@
 
 #include "irs-spectrum-model.h"
 
+#include "Eigen/src/Core/Matrix.h"
+
 #include "ns3/abort.h"
 #include "ns3/double.h"
 #include "ns3/object-base.h"
@@ -88,8 +90,8 @@ IrsSpectrumModel::CalcRCoeffs(double dApSta,
     m_elementPos = CalcElementPositions();
     m_cache.clear();
 
-    Eigen::VectorXcd stv_in = CalcSteeringvector(inAngle, m_lambda).array().arg();
-    Eigen::VectorXcd stv_out = CalcSteeringvector(outAngle, m_lambda).array().arg();
+    Eigen::VectorXcd stv_in = CalcSteeringvector(inAngle, m_lambda, m_elementPos).array().arg();
+    Eigen::VectorXcd stv_out = CalcSteeringvector(outAngle, m_lambda, m_elementPos).array().arg();
     double shift = CalcPhaseShift(dApSta, dApIrsSta, delta);
 
     m_rcoeffs = (std::complex<double>(0, 1) *
@@ -102,11 +104,31 @@ void
 IrsSpectrumModel::CalcRCoeffs(Angles inAngle, Angles outAngle)
 {
     m_elementPos = CalcElementPositions();
+    m_cache.clear();
 
-    Eigen::VectorXcd stv_in = CalcSteeringvector(inAngle, m_lambda).array().arg();
-    Eigen::VectorXcd stv_out = CalcSteeringvector(outAngle, m_lambda).array().arg();
+    Eigen::VectorXcd stv_in = CalcSteeringvector(inAngle, m_lambda, m_elementPos).array().arg();
+    Eigen::VectorXcd stv_out = CalcSteeringvector(outAngle, m_lambda, m_elementPos).array().arg();
 
     m_rcoeffs = (std::complex<double>(0, 1) * (-stv_in - stv_out)).array().exp();
+}
+
+void
+IrsSpectrumModel::SetRcoeffs(Eigen::VectorXcd rcoeffs)
+{
+    m_cache.clear();
+    m_rcoeffs = rcoeffs;
+}
+
+void
+IrsSpectrumModel::SetElementPos(Eigen::MatrixX3d positions)
+{
+    m_elementPos = positions;
+}
+
+Eigen::MatrixX3d
+IrsSpectrumModel::GetElementPos() const
+{
+    return m_elementPos;
 }
 
 Eigen::Vector3d
@@ -146,11 +168,11 @@ IrsSpectrumModel::CalcElementPositions() const
 }
 
 Eigen::VectorXcd
-IrsSpectrumModel::CalcSteeringvector(Angles angle, double lambda) const
+IrsSpectrumModel::CalcSteeringvector(Angles angle, double lambda, Eigen::MatrixX3d elementPos) const
 {
     Eigen::Vector3d k = CalcWaveVector(angle, lambda);
 
-    return (-std::complex<double>(0, 1) * (m_elementPos * k).array()).exp();
+    return (-std::complex<double>(0, 1) * (elementPos * k).array()).exp();
 }
 
 double
@@ -174,8 +196,8 @@ IrsSpectrumModel::GetIrsEntry(Angles in, Angles out, double lambda) const
 
     NS_ABORT_MSG_UNLESS(m_rcoeffs.size() > 0,
                         "Reflection coefficients must be calculated before use.");
-    Eigen::VectorXcd stv_in = CalcSteeringvector(in, lambda);
-    Eigen::VectorXcd stv_out = CalcSteeringvector(out, lambda);
+    Eigen::VectorXcd stv_in = CalcSteeringvector(in, lambda, m_elementPos);
+    Eigen::VectorXcd stv_out = CalcSteeringvector(out, lambda, m_elementPos);
 
     Eigen::VectorXd signal_in = Eigen::VectorXd::Ones(m_samples);
     Eigen::MatrixXcd signal_inc = signal_in * stv_in.transpose();
