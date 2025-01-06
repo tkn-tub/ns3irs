@@ -242,7 +242,7 @@ std::optional<std::pair<double, double>>
 IrsPropagationLossModel::CalcAngles(ns3::Vector a,
                                     ns3::Vector b,
                                     ns3::Vector irs,
-                                    ns3::Vector irsNormal) const
+                                    ns3::Vector irsNormal)
 {
     // Check if both a and b are on the correct side of the IRS (the side the irsNormal vector
     // points to)
@@ -288,7 +288,7 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector a,
 std::optional<Angles>
 IrsPropagationLossModel::CalcAngles3D(ns3::Vector node,
                                       ns3::Vector irs,
-                                      ns3::Vector irsNormal) const
+                                      ns3::Vector irsNormal)
 {
     auto cross = [](const ns3::Vector& a, const ns3::Vector& b) -> ns3::Vector {
         return ns3::Vector(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
@@ -304,7 +304,7 @@ IrsPropagationLossModel::CalcAngles3D(ns3::Vector node,
 
     // Check if the node is on the correct side
     double dotProduct = incident * irsNormal;
-    if (dotProduct <= 0)
+    if (dotProduct < std::numeric_limits<double>::epsilon())
     {
         // Node is on the wrong side of the IRS
         return std::nullopt;
@@ -472,8 +472,8 @@ IrsPropagationLossModel::CalcPath(const IrsPath& path,
             auto anglesIn = CalcAngles3D(prev->GetPosition(),
                                          irs->GetObject<MobilityModel>()->GetPosition(),
                                          irs->GetObject<IrsModel>()->GetDirection());
-            auto anglesOut = CalcAngles3D(irs->GetObject<MobilityModel>()->GetPosition(),
-                                          next->GetPosition(),
+            auto anglesOut = CalcAngles3D(next->GetPosition(),
+                                          irs->GetObject<MobilityModel>()->GetPosition(),
                                           irs->GetObject<IrsModel>()->GetDirection());
             if (!anglesIn || !anglesOut)
             {

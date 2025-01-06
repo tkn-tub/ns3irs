@@ -131,6 +131,33 @@ class IrsPropagationLossModel : public PropagationLossModel
     std::tuple<double, double> GetErrorModel() const;
 
     /**
+     * \brief Compute angles of incidence and reflection with respect to the IRS.
+     * \param a Position of point A (source or receiver).
+     * \param b Position of point B (source or receiver).
+     * \param irs Position of the IRS.
+     * \param irsNormal Normal vector of the IRS.
+     * \return A pair of angles in degrees:
+     *         - The angle of incidence.
+     *         - The angle of reflection.
+     *         Returns nullopt if A and B are on opposite sides of the IRS.
+     */
+    static std::optional<std::pair<double, double>> CalcAngles(ns3::Vector a,
+                                                        ns3::Vector b,
+                                                        ns3::Vector irs,
+                                                        ns3::Vector irsNormal);
+
+    /**
+     * \brief Compute angles of incidence with respect to the IRS.
+     * \param node Position of node (source or receiver).
+     * \param irs Position of the IRS.
+     * \param irsNormal Normal vector of the IRS.
+     * \return azimuth and elevation Angles - nullopt when not on correct side
+     */
+    static std::optional<Angles> CalcAngles3D(ns3::Vector node,
+                                       ns3::Vector irs,
+                                       ns3::Vector irsNormal);
+
+    /**
      * IRS paths are represented as strings of the form "[Node1->Node2]".
      */
     friend std::ostream& operator<<(std::ostream& os, const std::vector<IrsPath>& paths);
@@ -149,33 +176,6 @@ class IrsPropagationLossModel : public PropagationLossModel
      * \return The power in dBm.
      */
     double DbmFromW(double w) const;
-
-    /**
-     * \brief Compute angles of incidence and reflection with respect to the IRS.
-     * \param a Position of point A (source or receiver).
-     * \param b Position of point B (source or receiver).
-     * \param irs Position of the IRS.
-     * \param irsNormal Normal vector of the IRS.
-     * \return A pair of angles in degrees:
-     *         - The angle of incidence.
-     *         - The angle of reflection.
-     *         Returns nullopt if A and B are on opposite sides of the IRS.
-     */
-    std::optional<std::pair<double, double>> CalcAngles(ns3::Vector a,
-                                                        ns3::Vector b,
-                                                        ns3::Vector irs,
-                                                        ns3::Vector irsNormal) const;
-
-    /**
-     * \brief Compute angles of incidence with respect to the IRS.
-     * \param node Position of node (source or receiver).
-     * \param irs Position of the IRS.
-     * \param irsNormal Normal vector of the IRS.
-     * \return azimuth and elevation Angles - nullopt when not on correct side
-     */
-    std::optional<Angles> CalcAngles3D(ns3::Vector node,
-                                       ns3::Vector irs,
-                                       ns3::Vector irsNormal) const;
 
     /**
      * \brief Compute all possible signal paths involving IRS nodes.
