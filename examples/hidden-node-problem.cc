@@ -1,28 +1,15 @@
 /*
- * Copyright (c) 2024 Jakob Rühlow
+ * Original Copyright (c) 2010 IITP RAS.  Authors: Pavel Boyko <boyko@iitp.ru>
  *
- * This program is based on the work by Pavel Boyko <boyko@iitp.ru> (original copyright details
- * below).
+ * Copyright (c) 2024 Jakob Rühlow <ruehlow@tu-berlin.de>
  *
- * Original Copyright (c) 2010 IITP RAS
+ * SPDX-License-Identifier: GPL-2.0-only
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * Description: Classical hidden node problem and solution using IRS.
+ * This program is derived from Pavel Boyko's work, but has been significantly modified to show the
+ * impact of IRS in such scenarios.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * Authors: Pavel Boyko <boyko@iitp.ru> (original author)
- *          Jakob Rühlow <j.ruehlow@campus.tu-berlin.de> (modifications)
- *
- * Description: Classical hidden node problem and solution using IRS
+ * See Also: examples/wireless/wifi-hidden-terminal.cc
  */
 
 #include "ns3/boolean.h"

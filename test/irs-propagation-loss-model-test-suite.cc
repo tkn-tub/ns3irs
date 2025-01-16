@@ -1,18 +1,10 @@
 /*
  * Copyright (c) 2024 Jakob Rühlow
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * SPDX-License-Identifier: GPL-2.0-only
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Author: Jakob Rühlow <ruehlow@tu-berlin.de>
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "ns3/abort.h"
@@ -31,7 +23,6 @@
 #include "ns3/uinteger.h"
 
 #include <cmath>
-#include <iostream>
 #include <optional>
 #include <string>
 
@@ -40,14 +31,14 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE("IrsPropagationLossModelsTest");
 
 /**
- * \ingroup irs
- * \defgroup irs-test irsmodule tests
+ * @ingroup irs
+ * @defgroup irs-test irsmodule tests
  */
 
 /**
- * \ingroup irs-tests
+ * @ingroup irs-tests
  *
- * \brief IrsPropagationLossModel Test. Results for different lookuptables are compared against pl
+ * @brief IrsPropagationLossModel Test. Results for different lookuptables are compared against pl
  * formular from ETSI report.
  *
  */
@@ -195,9 +186,9 @@ IrsPropagationLossModelTestCase::DoRun()
 }
 
 /**
- * \ingroup irs-tests
+ * @ingroup irs-tests
  *
- * \brief IrsPropagationLossModel Test for helper functions
+ * @brief IrsPropagationLossModel Test for helper functions
  */
 class IrsPropagationLossModelHelperFunctionsTestCase : public TestCase
 {
@@ -370,9 +361,9 @@ IrsPropagationLossModelHelperFunctionsTestCase::DoRun()
 }
 
 /**
- * \ingroup irs-tests
+ * @ingroup irs-tests
  *
- * \brief IrsPropagationLossModel TestSuite
+ * @brief IrsPropagationLossModel TestSuite
  *
  */
 class IrsPropagationLossModelsTestSuite : public TestSuite

@@ -1,20 +1,10 @@
 /*
  * Copyright (c) 2024 Jakob Rühlow
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * SPDX-License-Identifier: GPL-2.0-only
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Author: Jakob Rühlow <ruehlow@tu-berlin.de>
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * Author: Jakob Rühlow <j.ruehlow@campus.tu-berlin.de>
  */
 
 #ifndef IRS_LOOKUP_HELPER_H
@@ -34,8 +24,8 @@ namespace ns3
 {
 
 /**
- * \class IrsLookupHelper
- * \brief Helper class to manage IRS lookup table installation and configuration.
+ * @class IrsLookupHelper
+ * @brief Helper class to manage IRS lookup table installation and configuration.
  *
  * This class simplifies the process of installing IRS lookup tables on nodes
  * and setting related parameters such as direction and table source.
@@ -47,43 +37,43 @@ class IrsLookupHelper
     ~IrsLookupHelper();
 
     /**
-     * \brief Installs an IRS model with the configured lookup table on a specific node.
-     * \param node A pointer to the node where the IRS model will be installed
+     * @brief Installs an IRS model with the configured lookup table on a specific node.
+     * @param node A pointer to the node where the IRS model will be installed
      */
     void Install(Ptr<Node> node) const;
 
     /**
-     * \brief Installs an IRS model with the configured lookup table on a node by name.
-     * \param nodeName The name of the node where the IRS model will be installed
+     * @brief Installs an IRS model with the configured lookup table on a node by name.
+     * @param nodeName The name of the node where the IRS model will be installed
      */
     void Install(std::string nodeName) const;
 
     /**
-     * \brief Installs an IRS model with the configured lookup table on a group of nodes.
-     * \param container A container of nodes where the IRS model will be installed
+     * @brief Installs an IRS model with the configured lookup table on a group of nodes.
+     * @param container A container of nodes where the IRS model will be installed
      */
     void Install(NodeContainer container) const;
 
     /**
-     * \brief Installs an IRS model with the configured lookup table on all nodes.
+     * @brief Installs an IRS model with the configured lookup table on all nodes.
      */
     void InstallAll() const;
 
     /**
-     * \brief Sets the IRS lookup table from a given csv file.
-     * \param filename The file path containing the lookup table data
+     * @brief Sets the IRS lookup table from a given csv file.
+     * @param filename The file path containing the lookup table data
      */
     void SetLookupTable(std::string filename);
 
     /**
-     * \brief Sets the IRS lookup table from a preloaded object.
-     * \param table A pointer to an IRS lookup table object
+     * @brief Sets the IRS lookup table from a preloaded object.
+     * @param table A pointer to an IRS lookup table object
      */
     void SetLookupTable(Ptr<IrsLookupTable> table);
 
     /**
-     * \brief Sets the direction vector for IRS configuration.
-     * \param direction A vector indicating the direction
+     * @brief Sets the direction vector for IRS configuration.
+     * @param direction A vector indicating the direction
      */
     void SetDirection(Vector direction);
 

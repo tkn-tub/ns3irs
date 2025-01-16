@@ -1,20 +1,10 @@
 /*
  * Copyright (c) 2024 Jakob Rühlow
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * SPDX-License-Identifier: GPL-2.0-only
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Author: Jakob Rühlow <ruehlow@tu-berlin.de>
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * Author: Jakob Rühlow <j.ruehlow@campus.tu-berlin.de>
  */
 
 #include "ns3/boolean.h"
@@ -24,8 +14,8 @@
 #include "ns3/double.h"
 #include "ns3/internet-stack-helper.h"
 #include "ns3/ipv4-address-helper.h"
-#include "ns3/irs-lookup-helper.h"
 #include "ns3/irs-propagation-loss-model.h"
+#include "ns3/irs-spectrum-model.h"
 #include "ns3/log.h"
 #include "ns3/mobility-helper.h"
 #include "ns3/mobility-model.h"
@@ -37,6 +27,7 @@
 #include "ns3/rng-seed-manager.h"
 #include "ns3/ssid.h"
 #include "ns3/string.h"
+#include "ns3/tuple.h"
 #include "ns3/uinteger.h"
 #include "ns3/yans-wifi-channel.h"
 #include "ns3/yans-wifi-helper.h"
@@ -105,10 +96,10 @@ ScenarioStatistics::ScenarioStatistics(std::string scenarioName, double interval
       m_startTime(1),
       m_skip(0)
 {
-    std::string filename = scenarioName + "_data.csv";
+    std::string filename = scenarioName + "_mobility.csv";
     m_outputFile.open(filename.c_str(), std::ios::out | std::ios::trunc);
     m_outputFile
-        << "Time,Throughput,DataRate,SNR,SuccessRate,TxPackets,RxPackets,DistanceIrs,DistanceAp"
+        << "Time,Throughput,DataRate,SNR,SuccessRate,TxPackets,RxPackets,PosAp,PosIrs,PosSta"
         << std::endl;
 
     Simulator::Schedule(Seconds(m_startTime), &ScenarioStatistics::PeriodicUpdate, this);
@@ -135,8 +126,8 @@ ScenarioStatistics::SaveDataPoint()
 
     m_outputFile << std::fixed << std::setprecision(4) << time << "," << GetThroughput() << ","
                  << GetDataRate() << "," << GetSNR() << "," << GetSuccessRate() << ","
-                 << m_txpackets << "," << m_rxpackets << "," << pos->GetDistanceFrom(irs) << ","
-                 << pos->GetDistanceFrom(ap) << std::endl;
+                 << m_txpackets << "," << m_rxpackets << "," << ap->GetPosition() << ","
+                 << irs->GetPosition() << "," << pos->GetPosition() << std::endl;
     m_bytesTotal = 0;
     m_snrSum = 0;
     m_rxpackets = 0;
@@ -156,6 +147,49 @@ ScenarioStatistics::SetNodes(Ptr<NodeContainer> sta, Ptr<NodeContainer> irs, Ptr
     m_sta = sta;
     m_irs = irs;
     m_ap = ap;
+}
+
+std::optional<Angles>
+CalcAngles3D(ns3::Vector node, ns3::Vector irs, ns3::Vector irsNormal)
+{
+    auto cross = [](const ns3::Vector& a, const ns3::Vector& b) -> ns3::Vector {
+        return ns3::Vector(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+    };
+
+    auto normalize = [](const ns3::Vector& vec) -> ns3::Vector {
+        double length = vec.GetLength();
+        return ns3::Vector(vec.x / length, vec.y / length, vec.z / length);
+    };
+
+    // Calculate incident vector (from node to IRS) and normalize
+    ns3::Vector incident = normalize(node - irs);
+
+    // Check if the node is on the correct side
+    double dotProduct = incident * irsNormal;
+    if (dotProduct < std::numeric_limits<double>::epsilon())
+    {
+        std::cout << dotProduct << std::endl;
+        // Node is on the wrong side of the IRS
+        return std::nullopt;
+    }
+
+    // Create a local coordinate system for the IRS
+    ns3::Vector z_axis = irsNormal;
+
+    ns3::Vector reference =
+        (std::abs(irsNormal.z) > 0.9) ? ns3::Vector(1, 0, 0) : ns3::Vector(0, 0, 1);
+    ns3::Vector x_axis = normalize(cross(reference, irsNormal));
+    ns3::Vector y_axis = cross(z_axis, x_axis);
+
+    // Project incident vector onto local coordinate system
+    double x = incident * x_axis;
+    double y = incident * y_axis;
+    double z = incident * z_axis;
+
+    // Calculate angles
+    double azimuth = std::atan2(y, x);
+    double inclination = std::acos(z); // Inclination: [0, π]
+    return Angles(azimuth, inclination);
 }
 
 double
@@ -227,7 +261,17 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
     NodeContainer irsNode;
     wifiApNode.Create(1);
     wifiStaNode.Create(1);
-    irsNode.Create(1);
+
+    Vector pos_ap = {2, 0, 10};
+    Vector pos_irs = {0, 2, 10};
+    Vector pos_sta_opt = {10, 10, 0};
+
+    MobilityHelper moving;
+    moving.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
+    moving.Install(wifiStaNode);
+    // moving along y axis in 1 m/s
+    wifiStaNode.Get(0)->GetObject<MobilityModel>()->SetPosition({10, 1, 0});
+    wifiStaNode.Get(0)->GetObject<ConstantVelocityMobilityModel>()->SetVelocity({0, 1, 0});
 
     // Set up WiFi
     YansWifiPhyHelper wifiPhy;
@@ -235,27 +279,159 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
 
     wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
 
-    IrsLookupHelper irsHelper;
-    irsHelper.SetDirection(Vector(0, 1, 0));
-    irsHelper.SetLookupTable(
-        "contrib/irs/examples/lookuptables/IRS_400_IN135_OUT6_FREQ5.21GHz_mobility.csv");
-    irsHelper.Install(irsNode);
+    if (scenario == "irs" || scenario == "los")
+    {
+        irsNode.Create(1);
+        MobilityHelper mobility;
+        Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
+        positionAlloc->Add(pos_ap);
+        positionAlloc->Add(pos_irs);
+        mobility.SetPositionAllocator(positionAlloc);
+        mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+        mobility.Install(wifiApNode);
+        mobility.Install(irsNode);
+        Ptr<IrsSpectrumModel> irs = CreateObjectWithAttributes<IrsSpectrumModel>(
+            "Direction",
+            VectorValue({1, 0, 0}),
+            "N",
+            TupleValue<UintegerValue, UintegerValue>({20, 20}),
+            "Spacing",
+            TupleValue<DoubleValue, DoubleValue>({0.028770869289827, 0.028770869289827}),
+            "Samples",
+            UintegerValue(100),
+            "Frequency",
+            DoubleValue(5.21e9));
 
-    Ptr<FriisPropagationLossModel> irsLossModel = CreateObject<FriisPropagationLossModel>();
-    irsLossModel->SetFrequency(5.21e9);
+        std::optional<Angles> in_angle = CalcAngles3D(pos_ap, pos_irs, {1, 0, 0});
+        std::optional<Angles> out_angle = CalcAngles3D(pos_sta_opt, pos_irs, {1, 0, 0});
+        NS_ASSERT(in_angle.has_value());
+        NS_ASSERT(out_angle.has_value());
+        std::cout << in_angle.value() << std::endl;
+        std::cout << out_angle.value() << std::endl;
+        irs->CalcRCoeffs(in_angle.value(), out_angle.value());
 
-    Ptr<LogDistancePropagationLossModel> losLossModel =
-        CreateObject<LogDistancePropagationLossModel>();
+        irsNode.Get(0)->AggregateObject(irs);
 
-    wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
-                                   "IrsNodes",
-                                   PointerValue(&irsNode),
-                                   "IrsLossModel",
-                                   PointerValue(irsLossModel),
-                                   "LosLossModel",
-                                   PointerValue(losLossModel),
-                                   "Frequency",
-                                   DoubleValue(5.21e9));
+        Ptr<LogDistancePropagationLossModel> lossModel =
+            CreateObject<LogDistancePropagationLossModel>();
+        lossModel->SetPathLossExponent(2);
+
+        if (scenario == "los")
+        {
+            Ptr<LogDistancePropagationLossModel> losLossModel =
+                CreateObject<LogDistancePropagationLossModel>();
+            lossModel->SetPathLossExponent(3);
+            wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
+                                           "IrsNodes",
+                                           PointerValue(&irsNode),
+                                           "IrsLossModel",
+                                           PointerValue(lossModel),
+                                           "LosLossModel",
+                                           PointerValue(losLossModel),
+                                           "Frequency",
+                                           DoubleValue(5.21e9));
+        }
+        else
+        {
+            wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
+                                           "IrsNodes",
+                                           PointerValue(&irsNode),
+                                           "IrsLossModel",
+                                           PointerValue(lossModel),
+                                           "Frequency",
+                                           DoubleValue(5.21e9));
+        }
+    }
+    else if (scenario == "subsections")
+    {
+        irsNode.Create(4);
+        MobilityHelper mobility;
+        Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
+        positionAlloc->Add(pos_ap);
+        positionAlloc->Add(pos_irs);
+        positionAlloc->Add(pos_irs);
+        positionAlloc->Add(pos_irs);
+        positionAlloc->Add(pos_irs);
+        mobility.SetPositionAllocator(positionAlloc);
+        mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+        mobility.Install(wifiApNode);
+        mobility.Install(irsNode);
+
+        Ptr<IrsSpectrumModel> irs1 = CreateObjectWithAttributes<IrsSpectrumModel>(
+            "Direction",
+            VectorValue({1, 0, 0}),
+            "N",
+            TupleValue<UintegerValue, UintegerValue>({5, 5}),
+            "Spacing",
+            TupleValue<DoubleValue, DoubleValue>({0.028770869289827, 0.028770869289827}),
+            "Frequency",
+            DoubleValue(5.21e9));
+        std::optional<Angles> in_angle = CalcAngles3D(pos_ap, pos_irs, {1, 0, 0});
+        std::optional<Angles> out_angle = CalcAngles3D({10, 4, 0}, pos_irs, {1, 0, 0});
+        NS_ASSERT(in_angle.has_value());
+        NS_ASSERT(out_angle.has_value());
+        irs1->CalcRCoeffs(in_angle.value(), out_angle.value());
+        irsNode.Get(0)->AggregateObject(irs1);
+
+        Ptr<IrsSpectrumModel> irs2 = CreateObjectWithAttributes<IrsSpectrumModel>(
+            "Direction",
+            VectorValue({1, 0, 0}),
+            "N",
+            TupleValue<UintegerValue, UintegerValue>({5, 5}),
+            "Spacing",
+            TupleValue<DoubleValue, DoubleValue>({0.028770869289827, 0.028770869289827}),
+            "Frequency",
+            DoubleValue(5.21e9));
+        in_angle = CalcAngles3D(pos_ap, pos_irs, {1, 0, 0});
+        out_angle = CalcAngles3D({10, 8, 0}, pos_irs, {1, 0, 0});
+        NS_ASSERT(in_angle.has_value());
+        NS_ASSERT(out_angle.has_value());
+        irs2->CalcRCoeffs(in_angle.value(), out_angle.value());
+        irsNode.Get(1)->AggregateObject(irs2);
+
+        Ptr<IrsSpectrumModel> irs3 = CreateObjectWithAttributes<IrsSpectrumModel>(
+            "Direction",
+            VectorValue({1, 0, 0}),
+            "N",
+            TupleValue<UintegerValue, UintegerValue>({5, 5}),
+            "Spacing",
+            TupleValue<DoubleValue, DoubleValue>({0.028770869289827, 0.028770869289827}),
+            "Frequency",
+            DoubleValue(5.21e9));
+        in_angle = CalcAngles3D(pos_ap, pos_irs, {1, 0, 0});
+        out_angle = CalcAngles3D({10, 12, 0}, pos_irs, {1, 0, 0});
+        NS_ASSERT(in_angle.has_value());
+        NS_ASSERT(out_angle.has_value());
+        irs3->CalcRCoeffs(in_angle.value(), out_angle.value());
+        irsNode.Get(2)->AggregateObject(irs3);
+
+        Ptr<IrsSpectrumModel> irs4 = CreateObjectWithAttributes<IrsSpectrumModel>(
+            "Direction",
+            VectorValue({1, 0, 0}),
+            "N",
+            TupleValue<UintegerValue, UintegerValue>({5, 5}),
+            "Spacing",
+            TupleValue<DoubleValue, DoubleValue>({0.028770869289827, 0.028770869289827}),
+            "Frequency",
+            DoubleValue(5.21e9));
+        in_angle = CalcAngles3D(pos_ap, pos_irs, {1, 0, 0});
+        out_angle = CalcAngles3D({10, 16, 0}, pos_irs, {1, 0, 0});
+        NS_ASSERT(in_angle.has_value());
+        NS_ASSERT(out_angle.has_value());
+        irs4->CalcRCoeffs(in_angle.value(), out_angle.value());
+        irsNode.Get(3)->AggregateObject(irs4);
+
+        Ptr<LogDistancePropagationLossModel> lossModel =
+            CreateObject<LogDistancePropagationLossModel>();
+        lossModel->SetPathLossExponent(2);
+        wifiChannel.AddPropagationLoss("ns3::IrsPropagationLossModel",
+                                       "IrsNodes",
+                                       PointerValue(&irsNode),
+                                       "IrsLossModel",
+                                       PointerValue(lossModel),
+                                       "Frequency",
+                                       DoubleValue(5.21e9));
+    }
 
     wifiPhy.SetChannel(wifiChannel.Create());
     wifiPhy.SetErrorRateModel("ns3::YansErrorRateModel");
@@ -276,36 +452,6 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
 
     NetDeviceContainer apDevice;
     apDevice = wifi.Install(wifiPhy, wifiMac, wifiApNode);
-
-    // Mobility
-    MobilityHelper mobility;
-    Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
-    positionAlloc->Add(Vector(0.0, 0.0, 0.0));
-    positionAlloc->Add(Vector(1.0, 1.0, 0.0));
-    mobility.SetPositionAllocator(positionAlloc);
-    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    mobility.Install(wifiApNode);
-    mobility.Install(irsNode);
-
-    MobilityHelper moving;
-    moving.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
-    moving.Install(wifiStaNode);
-    if (scenario == "1")
-    {
-        // 30s distance to optimal position
-        // moving along x axis in walking speed (1.4 m/s)
-        wifiStaNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(-38, -30, 0));
-        wifiStaNode.Get(0)->GetObject<ConstantVelocityMobilityModel>()->SetVelocity(
-            Vector(1.4, 0, 0));
-    }
-    else
-    {
-        // 30s distance to optimal position
-        // moving away from IRS on optimal angle in walking speed (1.4 m/s)
-        wifiStaNode.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(1.3029, -2.1302, 0));
-        wifiStaNode.Get(0)->GetObject<ConstantVelocityMobilityModel>()->SetVelocity(
-            Vector(0.1349, -1.3935, 0));
-    }
 
     // Internet stack
     InternetStackHelper stack;
@@ -346,7 +492,7 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
         MakeCallback(&ScenarioStatistics::TxCallback, &stats));
 
     // Run simulation
-    Simulator::Stop(Seconds(61));
+    Simulator::Stop(Seconds(20));
     Simulator::Run();
 
     stats.SaveDataPoint();
@@ -357,7 +503,7 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
 int
 main(int argc, char* argv[])
 {
-    std::string scenario = "1";
+    std::string scenario = "irs";
     std::string wifiManager = "ns3::MinstrelHtWifiManager";
     bool verbose = false;
     bool debug = false;
@@ -383,15 +529,18 @@ main(int argc, char* argv[])
         ns3::LogComponentEnable("IrsMobility", ns3::LOG_LEVEL_ALL);
     }
 
-    if (scenario == "1")
+    if (scenario == "irs")
     {
-        // along x axis
-        RunScenario("1", wifiManager, runNumber);
+        RunScenario("irs", wifiManager, runNumber);
     }
-    else if (scenario == "2")
+    else if (scenario == "subsections")
     {
-        // on diagonal axis in beamform away from irs
-        RunScenario("2", wifiManager, runNumber);
+        RunScenario("subsections", wifiManager, runNumber);
     }
+    else if (scenario == "los")
+    {
+        RunScenario("los", wifiManager, runNumber);
+    }
+
     return 0;
 }
