@@ -221,10 +221,15 @@ class IrsSpectrumModel : public IrsModel
         bool operator==(const CacheKey& other) const
         {
             constexpr double EPSILON = 1e-10;
-            return std::abs(in.GetAzimuth() - other.in.GetAzimuth()) < EPSILON &&
-                   std::abs(in.GetInclination() - other.in.GetInclination()) < EPSILON &&
-                   std::abs(out.GetAzimuth() - other.out.GetAzimuth()) < EPSILON &&
-                   std::abs(out.GetInclination() - other.out.GetInclination()) < EPSILON &&
+            const double RAD_TO_DEG = 180.0 / M_PI;
+            return static_cast<int>(in.GetAzimuth() * RAD_TO_DEG) ==
+                       static_cast<int>(other.in.GetAzimuth() * RAD_TO_DEG) &&
+                   static_cast<int>(in.GetInclination() * RAD_TO_DEG) ==
+                       static_cast<int>(other.in.GetInclination() * RAD_TO_DEG) &&
+                   static_cast<int>(out.GetAzimuth() * RAD_TO_DEG) ==
+                       static_cast<int>(other.out.GetAzimuth() * RAD_TO_DEG) &&
+                   static_cast<int>(out.GetInclination() * RAD_TO_DEG) ==
+                       static_cast<int>(other.out.GetInclination() * RAD_TO_DEG) &&
                    std::abs(lambda - other.lambda) < EPSILON;
         }
     };
@@ -233,12 +238,28 @@ class IrsSpectrumModel : public IrsModel
     {
         size_t operator()(const CacheKey& key) const
         {
-            size_t h1 = std::hash<double>()(key.in.GetAzimuth());
-            size_t h2 = std::hash<double>()(key.in.GetInclination());
-            size_t h3 = std::hash<double>()(key.out.GetAzimuth());
-            size_t h4 = std::hash<double>()(key.out.GetInclination());
+            const double RAD_TO_DEG = 180.0 / M_PI;
+            // Convert angles to integers in degrees
+            auto inAzimuthDeg = static_cast<uint16_t>(key.in.GetAzimuth() * RAD_TO_DEG);
+            auto inInclinationDeg = static_cast<uint16_t>(key.in.GetInclination() * RAD_TO_DEG);
+            auto outAzimuthDeg = static_cast<uint16_t>(key.out.GetAzimuth() * RAD_TO_DEG);
+            auto outInclinationDeg = static_cast<uint16_t>(key.out.GetInclination() * RAD_TO_DEG);
+
+            // Hash individual components
+            size_t h1 = std::hash<uint16_t>()(inAzimuthDeg);
+            size_t h2 = std::hash<uint16_t>()(inInclinationDeg);
+            size_t h3 = std::hash<uint16_t>()(outAzimuthDeg);
+            size_t h4 = std::hash<uint16_t>()(outInclinationDeg);
             size_t h5 = std::hash<double>()(key.lambda);
-            return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3) ^ (h5 << 4);
+
+            // Combine hashes
+            size_t seed = h1;
+            seed ^= h2 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            seed ^= h3 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            seed ^= h4 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            seed ^= h5 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+
+            return seed;
         }
     };
 
