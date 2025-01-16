@@ -158,25 +158,25 @@ class IrsPropagationLossModel : public PropagationLossModel
                                               ns3::Vector irsNormal);
 
     /**
-     * IRS paths are represented as strings of the form "[Node1->Node2]".
-     */
-    friend std::ostream& operator<<(std::ostream& os, const std::vector<IrsPath>& paths);
-
-  private:
-    /**
      * \brief Convert a dBm value to Watts.
      * \param dbm The power in dBm.
      * \return The power in Watts.
      */
-    double DbmToW(double dbm) const;
+    static double DbmToW(double dbm);
 
     /**
      * \brief Convert a power value in Watts to dBm.
      * \param w The power in Watts.
      * \return The power in dBm.
      */
-    double DbmFromW(double w) const;
+    static double DbmFromW(double w);
 
+    /**
+     * IRS paths are represented as strings of the form "[Node1->Node2]".
+     */
+    friend std::ostream& operator<<(std::ostream& os, const std::vector<IrsPath>& paths);
+
+  private:
     /**
      * \brief Compute all possible signal paths involving IRS nodes.
      */

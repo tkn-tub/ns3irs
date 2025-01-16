@@ -203,7 +203,7 @@ IrsPropagationLossModel::GetErrorModel() const
 
 // from FriisPropagationLossModel
 double
-IrsPropagationLossModel::DbmToW(double dbm) const
+IrsPropagationLossModel::DbmToW(double dbm)
 {
     double mw = std::pow(10.0, dbm / 10.0);
     return mw / 1000.0;
@@ -211,7 +211,7 @@ IrsPropagationLossModel::DbmToW(double dbm) const
 
 // from FriisPropagationLossModel
 double
-IrsPropagationLossModel::DbmFromW(double w) const
+IrsPropagationLossModel::DbmFromW(double w)
 {
     double dbm = std::log10(w * 1000.0) * 10.0;
     return dbm;
