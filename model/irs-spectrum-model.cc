@@ -21,6 +21,7 @@
 #include <cmath>
 #include <complex>
 #include <cstdint>
+#include <iostream>
 
 namespace ns3
 {
@@ -136,25 +137,24 @@ IrsSpectrumModel::CalcWaveVector(Angles angle, double lambda) const
 Eigen::MatrixX3d
 IrsSpectrumModel::CalcElementPositions() const
 {
-    static Eigen::MatrixX3d element_positions =
-        Eigen::Matrix<double, Eigen::Dynamic, 3>::NullaryExpr(
-            m_Nr * m_Nc,
-            3,
-            [this](Eigen::Index row, Eigen::Index col) {
-                int i = row / m_Nc;
-                int j = row % m_Nc;
-                switch (col)
-                {
-                case 0:
-                    return 0.0; // x
-                case 1:
-                    return (i - (m_Nr - 1) / 2.0) * m_dr; // y
-                case 2:
-                    return ((m_Nc - 1) / 2.0 - j) * m_dc; // z
-                default:
-                    return 0.0;
-                }
-            });
+    Eigen::MatrixX3d element_positions = Eigen::Matrix<double, Eigen::Dynamic, 3>::NullaryExpr(
+        m_Nr * m_Nc,
+        3,
+        [this](Eigen::Index row, Eigen::Index col) {
+            int i = row / m_Nc;
+            int j = row % m_Nc;
+            switch (col)
+            {
+            case 0:
+                return 0.0; // x
+            case 1:
+                return (i - (m_Nr - 1) / 2.0) * m_dr; // y
+            case 2:
+                return ((m_Nc - 1) / 2.0 - j) * m_dc; // z
+            default:
+                return 0.0;
+            }
+        });
     return element_positions;
 }
 
@@ -187,8 +187,13 @@ IrsSpectrumModel::GetIrsEntry(Angles in, Angles out, double lambda) const
 
     NS_ABORT_MSG_UNLESS(m_rcoeffs.size() > 0,
                         "Reflection coefficients must be calculated before use.");
+
     Eigen::VectorXcd stv_in = CalcSteeringvector(in, lambda, m_elementPos);
     Eigen::VectorXcd stv_out = CalcSteeringvector(out, lambda, m_elementPos);
+
+    NS_ASSERT_MSG((stv_in.array() == stv_in.array()).all(), "stv_in contains NaN values!");
+    NS_ASSERT_MSG((stv_out.array() == stv_out.array()).all(), "stv_out contains NaN values!");
+    NS_ASSERT_MSG((m_rcoeffs.array() == m_rcoeffs.array()).all(), "m_rcoeffs contains NaN values!");
 
     Eigen::VectorXd signal_in = Eigen::VectorXd::Ones(m_samples);
     Eigen::MatrixXcd signal_inc = signal_in * stv_in.transpose();

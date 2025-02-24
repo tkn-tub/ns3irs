@@ -278,6 +278,8 @@ IrsPropagationLossModel::CalcAngles(ns3::Vector a,
 std::optional<Angles>
 IrsPropagationLossModel::CalcAngles3D(ns3::Vector node, ns3::Vector irs, ns3::Vector irsNormal)
 {
+    NS_ASSERT_MSG(node != irs, "Node and IRS are on same position");
+
     auto cross = [](const ns3::Vector& a, const ns3::Vector& b) -> ns3::Vector {
         return ns3::Vector(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
     };
@@ -442,7 +444,6 @@ IrsPropagationLossModel::CalcPath(const IrsPath& path,
             {
                 return std::complex<double>(0.0, 0.0);
             }
-            // Get IRS impact from lookuptable
             IrsEntry modifier =
                 irsModel->GetIrsEntry(std::round(angles->first), std::round(angles->second));
             NS_LOG_INFO("IRS Gain (dBm): " << modifier.gain << " | IRS phase shift (radians): "
@@ -467,7 +468,6 @@ IrsPropagationLossModel::CalcPath(const IrsPath& path,
             {
                 return std::complex<double>(0.0, 0.0);
             }
-            // Get IRS impact from lookuptable
             IrsEntry modifier =
                 irsModel->GetIrsEntry(anglesIn.value(), anglesOut.value(), m_lambda);
             NS_LOG_INFO("IRS Gain (dBm): " << modifier.gain << " | IRS phase shift (radians): "
@@ -490,6 +490,7 @@ IrsPropagationLossModel::CalcPath(const IrsPath& path,
     NS_LOG_DEBUG("IRS - Node(s): " << path.size() << ", Distance: " << totalDistance << "m"
                                    << ", Path Loss: " << pathLoss << "dBm" << ", Phase: " << theta);
 
+    NS_ASSERT_MSG(!std::isnan(pathLoss), "Path loss is NaN");
     return std::sqrt(DbmToW(pathLoss)) * std::exp(phase_path);
 }
 
