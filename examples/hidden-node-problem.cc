@@ -1,7 +1,7 @@
 /*
  * Original Copyright (c) 2010 IITP RAS.  Authors: Pavel Boyko <boyko@iitp.ru>
  *
- * Copyright (c) 2024 Jakob Rühlow <ruehlow@tu-berlin.de>
+ * Copyright (c) 2024-2025 Jakob Rühlow <ruehlow@tu-berlin.de>
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *
@@ -27,6 +27,7 @@
 #include "ns3/on-off-helper.h"
 #include "ns3/propagation-delay-model.h"
 #include "ns3/propagation-loss-model.h"
+#include "ns3/rng-seed-manager.h"
 #include "ns3/string.h"
 #include "ns3/udp-echo-helper.h"
 #include "ns3/uinteger.h"
@@ -41,9 +42,9 @@ NS_LOG_COMPONENT_DEFINE("HiddenNodeProblem");
 
 void
 CalculateThroughput(Ptr<FlowMonitor> monitor,
-                    Gnuplot2dDataset* data1,
-                    Gnuplot2dDataset* data2,
-                    double time)
+                    std::ofstream* csvFile,
+                    double time,
+                    const std::string& scenario)
 {
     FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats();
     double throughput1 = 0.0, throughput2 = 0.0;
@@ -61,18 +62,20 @@ CalculateThroughput(Ptr<FlowMonitor> monitor,
         throughput2 = iter->second.rxBytes * 8.0 / (time * 1e6); // Convert to Mbps
     }
 
-    // Add points to datasets
-    data1->Add(time, throughput1);
-    data2->Add(time, throughput2);
+    *csvFile << time << "," << scenario << "," << throughput1 << "," << throughput2 << "\n";
 }
 
 void
 RunSimulation(bool useIRS,
               bool useRtsCts,
               double simTime,
-              Gnuplot2dDataset& data1,
-              Gnuplot2dDataset& data2)
+              std::ofstream& csvFile,
+              uint16_t runNumber,
+              const std::string& scenario)
 {
+    RngSeedManager::SetSeed(2025);
+    RngSeedManager::SetRun(runNumber);
+
     // Disable CTS/RTS
     if (useRtsCts)
     {
@@ -190,7 +193,7 @@ RunSimulation(bool useIRS,
     // Schedule throughput calculation
     for (double t = 1.0; t <= simTime; t += 0.05)
     {
-        Simulator::Schedule(Seconds(t), &CalculateThroughput, monitor, &data1, &data2, t);
+        Simulator::Schedule(Seconds(t), &CalculateThroughput, monitor, &csvFile, t, scenario);
     }
 
     Simulator::Run();
@@ -227,12 +230,12 @@ main(int argc, char** argv)
 {
     double simTime = 15.0;
     bool verbose = false;
-    bool rts_cts = false;
+    uint16_t run = 1;
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("verbose", "Verbose Logging", verbose);
+    cmd.AddValue("run", "Seed run number", run);
     cmd.AddValue("simTime", "Simulation Time (in seconds)", simTime);
-    cmd.AddValue("rts-cts", "Enable Rts/Cts simulation", rts_cts);
 
     cmd.Parse(argc, argv);
 
@@ -241,56 +244,22 @@ main(int argc, char** argv)
         ns3::LogComponentEnable("HiddenNodeProblem", ns3::LOG_LEVEL_INFO);
     }
 
-    // Create Gnuplot object
-    Gnuplot plot("hidden_node_problem_throughput.svg");
-    plot.SetTitle("Throughput: With and Without IRS");
-    plot.SetLegend("Time (s)", "Throughput (Mbps)");
-    plot.SetExtra("set key right center box 3");
-    plot.SetTerminal("svg");
-
-    // Create datasets
-    Gnuplot2dDataset dataNoIrs1, dataNoIrs2, dataIrs1, dataIrs2;
-    Gnuplot2dDataset dataRts1, dataRts2;
-    dataNoIrs1.SetTitle("Tx(1) without IRS");
-    dataNoIrs2.SetTitle("Tx(2) without IRS");
-    dataIrs1.SetTitle("Tx(1) with IRS");
-    dataIrs2.SetTitle("Tx(2) with IRS");
-
-    dataNoIrs1.SetStyle(Gnuplot2dDataset::LINES);
-    dataNoIrs2.SetStyle(Gnuplot2dDataset::LINES);
-    dataIrs1.SetStyle(Gnuplot2dDataset::LINES);
-    dataIrs2.SetStyle(Gnuplot2dDataset::LINES);
+    std::ostringstream filename;
+    filename << "contrib/irs/results_and_scripts/hidden-node-problem/hidden-node-problem_" << run
+             << ".csv";
+    std::ofstream csvFile(filename.str());
+    csvFile << "Time,Scenario,Tx1_Throughput,Tx2_Throughput\n";
 
     NS_LOG_INFO("Hidden node problem without IRS:");
-    RunSimulation(false, false, simTime, dataNoIrs1, dataNoIrs2);
+    RunSimulation(false, false, simTime, csvFile, run, "Baseline");
     NS_LOG_INFO("------------------------------------------------");
     NS_LOG_INFO("Hidden node problem with IRS:");
-    RunSimulation(true, false, simTime, dataIrs1, dataIrs2);
+    RunSimulation(true, false, simTime, csvFile, run, "IRS");
+    NS_LOG_INFO("------------------------------------------------");
+    NS_LOG_INFO("Hidden node problem with RTS-CTS:");
+    RunSimulation(false, true, simTime, csvFile, run, "RTS/CTS");
 
-    if (rts_cts)
-    {
-        dataRts1.SetTitle("Tx(1) RTS/CTS");
-        dataRts2.SetTitle("Tx(2) RTS/CTS");
-        dataRts1.SetStyle(Gnuplot2dDataset::LINES);
-        dataRts2.SetStyle(Gnuplot2dDataset::LINES);
-        RunSimulation(false, true, simTime, dataRts1, dataRts2);
-    }
-
-    // Add datasets to plot
-    plot.AddDataset(dataNoIrs1);
-    plot.AddDataset(dataNoIrs2);
-    plot.AddDataset(dataIrs1);
-    plot.AddDataset(dataIrs2);
-    if (rts_cts)
-    {
-        plot.AddDataset(dataRts1);
-        plot.AddDataset(dataRts2);
-    }
-
-    // Open plot file
-    std::ofstream plotFile("contrib/irs/results_and_scripts/hidden_node_problem_throughput.plt");
-    plot.GenerateOutput(plotFile);
-    plotFile.close();
+    csvFile.close();
 
     return 0;
 }
