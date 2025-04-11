@@ -6,18 +6,15 @@ Before using the IRS module, ensure the following requirements are met:
 
 - Tested with `ns-3.42`
 - Module located in the `contrib/` directory
-- `Eigen3` library installed, and ns-3 built with the `--enable-eigen` flag.
-  [Eigen3 Documentation](https://gitlab.com/libeigen/eigen)
-- The modified ns-3 installation is at [jakob.ruehlow/ns-3-dev](https://webgit.ccs-labs.org/git/jakob.ruehlow/ns-3-dev)
-- When using your own ns-3 installation, modify the following:
-
-  ```cpp
-  // src/network/helper/node-container.h:
-  // From:
-  class NodeContainer;
-  // To:
-  class NodeContainer : public Object;
-  ```
+- The [Eigen3 library](https://gitlab.com/libeigen/eigen) must be installed, and ns-3 must be built with the `--enable-eigen` flag.
+- A modification is required in the ns-3 source code:
+```cpp
+// File: src/network/helper/node-container.h
+// Original:
+class NodeContainer;
+// Replace with:
+class NodeContainer : public Object;
+```
 ### Using the IRS Module in Simulations
 #### 1. Creating the IRS Node
 Create one or multiple IRS nodes using `NodeContainer`:
@@ -49,13 +46,13 @@ irsHelper.Install(irsNodes);
 ```
 The lookup table can be generated using the `generateIrsLookupTable` helper script in the `matlab/` directory, as follows:
 ```matlab
-freq = 5.15e9;		  % Frequency in Hz
-Nr = 20;		        % Number of elements in rows
-Nc = 20;		        % Number of elements in columns
-ap = [0;0;0];		    % AP position
-ue = [50;0;0];		  % UE position
-ris = [0.7;-0.7;0];	% IRS position
-dir = [0,1,0];	    % IRS direction
+freq = 5.15e9;      % Frequency in Hz
+Nr = 20;            % Number of elements in rows
+Nc = 20;            % Number of elements in columns
+ap = [0;0;0];       % AP position
+ue = [50;0;0];      % UE position
+ris = [0.7;-0.7;0]; % IRS position
+dir = [0,1,0];      % IRS direction
 [r_ap_ris, a_ap_ris, r_ris_ue, a_ris_ue] = calcangle(ap, ue, ris, dir);
 ris_table = generateIrsLookupTable( ...
     round(a_ap_ris(1)), round(a_ris_ue(1)), Nr, Nc, freq, ...
@@ -73,15 +70,13 @@ Ptr<IrsSpectrumModel> irs = CreateObjectWithAttributes<IrsSpectrumModel>(
     TupleValue<UintegerValue, UintegerValue>({20,20}),
     "Spacing",
     TupleValue<DoubleValue, DoubleValue>({0.05, 0.05}),
-    "Samples",
-    UintegerValue(100),
     "Frequency",
     DoubleValue(5.21e9));
 irs->CalcRCoeffs(los_distance,
-		 irs_distance,
-		 Angles(in_az, in_el),
-		 Angles(out_az, out_el),
-		 0);
+         irs_distance,
+         Angles(in_az, in_el),
+         Angles(out_az, out_el),
+         0);
 irsNodes.Get(0)->AggregateObject(irs);
 ```
 
@@ -90,7 +85,7 @@ The variables `in\_az` and `in\_el` represent the optimized incoming azimuth and
 Similarly, `out\_az` and `out\_el` correspond to the optimized outgoing azimuth and elevation angles, respectively, in radians.
 The last argument in the `CalcRCoeffs` function is set to zero, which calculates the reflection coefficients so they create constructive interference with the LOS path.
 
-*N* represents the number of elements in both the row and column directions, while *Spacing* denotes the distance between elements. *Samples* specifies the number of samples taken of the radio wave, and *Frequency* indicates the operating frequency for which the IRS is designed.
+*N* represents the number of elements in both the row and column directions, while *Spacing* denotes the distance between elements. *Frequency* indicates the operating frequency for which the IRS is designed.
 
 ## Simulations Conducted in this Thesis
 ### File Structure

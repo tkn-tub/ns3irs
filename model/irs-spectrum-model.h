@@ -77,8 +77,7 @@ class IrsSpectrumModel : public IrsModel
                      double dApIrsSta,
                      Angles inAngle,
                      Angles outAngle,
-                     double delta = 0,
-                     double scale = 1);
+                     double delta = 0);
 
     /**
      * @brief Calculate reflection coefficients for the given angles.
@@ -136,18 +135,6 @@ class IrsSpectrumModel : public IrsModel
     std::tuple<double, double> GetSpacing() const;
 
     /**
-     * @brief Set the number of samples for numerical calculations.
-     * @param samples Number of samples
-     */
-    void SetSamples(const uint16_t samples);
-
-    /**
-     * @brief Retrieve the number of samples used.
-     * @return Number of samples
-     */
-    uint16_t GetSamples() const;
-
-    /**
      * @brief Set the carrier frequency for IRS calculations.
      * @param frequency Carrier frequency in Hz
      */
@@ -197,7 +184,6 @@ class IrsSpectrumModel : public IrsModel
     uint16_t m_Nc;
     double m_dr;
     double m_dc;
-    uint16_t m_samples;
     double m_frequency;
     double m_lambda;
     Eigen::VectorXcd m_rcoeffs;

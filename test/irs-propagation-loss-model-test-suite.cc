@@ -23,6 +23,7 @@
 #include "ns3/uinteger.h"
 
 #include <cmath>
+#include <iostream>
 #include <optional>
 #include <string>
 
@@ -325,8 +326,6 @@ IrsPropagationLossModelHelperFunctionsTestCase::IrsPathsTest(const std::vector<V
             TupleValue<UintegerValue, UintegerValue>({50, 50}),
             "Spacing",
             TupleValue<DoubleValue, DoubleValue>({0.028770869289827, 0.028770869289827}),
-            "Samples",
-            UintegerValue(100),
             "Frequency",
             DoubleValue(5.21e9));
         irs->CalcRCoeffs(Angles(DegreesToRadians(in_angles[i]), DegreesToRadians(0)),

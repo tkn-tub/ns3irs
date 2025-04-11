@@ -6,7 +6,6 @@ endif()
 set(examples_as_tests_sources)
 if(${ENABLE_EXAMPLES})
     set(examples_as_tests_sources
-        # test/irs-examples-test-suite.cc
         )
 endif()
 

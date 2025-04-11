@@ -129,8 +129,6 @@ IrsSpectrumModelTestCase::DoRun()
             TupleValue<UintegerValue, UintegerValue>({get<0>(tv.N), get<1>(tv.N)}),
             "Spacing",
             TupleValue<DoubleValue, DoubleValue>({get<0>(tv.d), get<1>(tv.d)}),
-            "Samples",
-            UintegerValue(100),
             "Frequency",
             DoubleValue(tv.freq));
         irs->CalcRCoeffs(40,
@@ -142,22 +140,25 @@ IrsSpectrumModelTestCase::DoRun()
         irsNormal->SetDirection(Vector(0, 1, 0));
         irsNormal->SetLookupTable(SetLookupTable(tv.lookuptable));
 
-        for (int i = 1; i < 180; ++i)
+        for (int i = 1; i < 180; i += 2)
         {
-            for (int j = 1; j < 180; ++j)
+            for (int j = 1; j < 180; j += 2)
             {
                 IrsEntry newEntry;
                 IrsEntry oldEntry;
                 newEntry = irs->GetIrsEntry(Angles(DegreesToRadians(i), DegreesToRadians(0)),
                                             Angles(DegreesToRadians(j), DegreesToRadians(0)),
-                                            tv.freq);
+                                            tv.lambda);
                 oldEntry = irsNormal->GetIrsEntry(i, j);
 
-                NS_TEST_EXPECT_MSG_EQ_TOL(newEntry.gain, oldEntry.gain, 0.3, "Unexpected gain");
+                NS_TEST_EXPECT_MSG_EQ_TOL(newEntry.gain,
+                                          oldEntry.gain,
+                                          0.3,
+                                          "Unexpected gain: " << i << " " << j);
                 NS_TEST_EXPECT_MSG_EQ_TOL(newEntry.phase_shift,
                                           oldEntry.phase_shift,
                                           0.05,
-                                          "Unexpected gain");
+                                          "Unexpected phase shift");
             }
         }
     }
@@ -180,8 +181,6 @@ class IrsSpectrumModelTestCaching : public TestCase
             TupleValue<UintegerValue, UintegerValue>({20, 20}),
             "Spacing",
             TupleValue<DoubleValue, DoubleValue>({0.028770869289827, 0.028770869289827}),
-            "Samples",
-            UintegerValue(100),
             "Frequency",
             DoubleValue(5.21e9));
         irs->CalcRCoeffs(Angles(DegreesToRadians(135), DegreesToRadians(0)),

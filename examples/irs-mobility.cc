@@ -297,8 +297,6 @@ RunScenario(std::string scenario, std::string wifiManager, uint16_t runNumber = 
             TupleValue<UintegerValue, UintegerValue>({20, 20}),
             "Spacing",
             TupleValue<DoubleValue, DoubleValue>({0.028770869289827, 0.028770869289827}),
-            "Samples",
-            UintegerValue(100),
             "Frequency",
             DoubleValue(5.21e9));
 

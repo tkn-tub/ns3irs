@@ -52,12 +52,6 @@ IrsSpectrumModel::GetTypeId()
                                                             &IrsSpectrumModel::GetSpacing),
                 MakeTupleChecker<DoubleValue, DoubleValue>(MakeDoubleChecker<double>(),
                                                            MakeDoubleChecker<double>()))
-            .AddAttribute(
-                "Samples",
-                "Amount of samples for wave.",
-                UintegerValue(1000),
-                MakeUintegerAccessor(&IrsSpectrumModel::SetSamples, &IrsSpectrumModel::GetSamples),
-                MakeUintegerChecker<uint16_t>())
             .AddAttribute("Frequency",
                           "Frequency in Hz",
                           DoubleValue(5.21e9),
@@ -76,8 +70,7 @@ IrsSpectrumModel::CalcRCoeffs(double dApSta,
                               double dApIrsSta,
                               Angles inAngle,
                               Angles outAngle,
-                              double delta,
-                              double scale)
+                              double delta)
 {
     m_elementPos = CalcElementPositions();
     m_cache.clear();
@@ -86,10 +79,10 @@ IrsSpectrumModel::CalcRCoeffs(double dApSta,
     Eigen::VectorXcd stv_out = CalcSteeringvector(outAngle, m_lambda, m_elementPos).array().arg();
     double shift = CalcPhaseShift(dApSta, dApIrsSta, delta);
 
-    m_rcoeffs = scale * (std::complex<double>(0, 1) *
-                         (Eigen::VectorXd::Constant(m_Nr * m_Nc, shift) - stv_in - stv_out))
-                            .array()
-                            .exp();
+    m_rcoeffs = (std::complex<double>(0, 1) *
+                 (Eigen::VectorXd::Constant(m_Nr * m_Nc, shift) - stv_in - stv_out))
+                    .array()
+                    .exp();
 }
 
 void
@@ -195,16 +188,13 @@ IrsSpectrumModel::GetIrsEntry(Angles in, Angles out, double lambda) const
     NS_ASSERT_MSG((stv_out.array() == stv_out.array()).all(), "stv_out contains NaN values!");
     NS_ASSERT_MSG((m_rcoeffs.array() == m_rcoeffs.array()).all(), "m_rcoeffs contains NaN values!");
 
-    Eigen::VectorXd signal_in = Eigen::VectorXd::Ones(m_samples);
-    Eigen::MatrixXcd signal_inc = signal_in * stv_in.transpose();
+    Eigen::MatrixXcd signal_inc = stv_in.transpose();
     Eigen::MatrixXcd signal_weighted = signal_inc.array().rowwise() * m_rcoeffs.transpose().array();
     Eigen::VectorXcd signal_ref = signal_weighted * stv_out;
 
     double gain =
-        10 * std::log10((signal_ref.conjugate().array() * signal_ref.array()).real().mean()) -
-        10 * std::log10((signal_in.conjugate().array() * signal_in.array()).real().mean());
-
-    double shift = (signal_in.array().arg() - signal_ref.array().arg()).mean();
+        10 * std::log10((signal_ref.conjugate().array() * signal_ref.array()).real().mean());
+    double shift = -signal_ref.array().arg().mean();
 
     IrsEntry result(gain, shift);
     m_cache.emplace(key, result);
@@ -260,19 +250,6 @@ double
 IrsSpectrumModel::GetFrequency() const
 {
     return m_frequency;
-}
-
-void
-IrsSpectrumModel::SetSamples(uint16_t samples)
-{
-    NS_ABORT_MSG_UNLESS(samples > 0, "Samples should be greater zero.");
-    m_samples = samples;
-}
-
-uint16_t
-IrsSpectrumModel::GetSamples() const
-{
-    return m_samples;
 }
 
 Eigen::VectorXcd
