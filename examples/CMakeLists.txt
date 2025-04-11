@@ -46,3 +46,13 @@ build_lib_example(
         ${libwifi}
         ${liblte}
 )
+
+build_lib_example(
+    NAME irs-multiuser
+    SOURCE_FILES irs-multiuser.cc
+    LIBRARIES_TO_LINK
+        ${libirs}
+        ${libwifi}
+        ${libinternet}
+        ${libapplications}
+)
