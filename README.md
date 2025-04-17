@@ -5,7 +5,7 @@
 Before using the IRS module, ensure the following requirements are met:
 
 - Tested with `ns-3.43`
-- Module located in the `contrib/` directory
+- This module has to be located in the `contrib/` directory
 - The [Eigen3 library](https://gitlab.com/libeigen/eigen) must be installed, and ns-3 must be built with the `--enable-eigen` flag.
 - A modification is required in the ns-3 source code:
 ```cpp
